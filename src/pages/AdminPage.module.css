@@ -1,0 +1,30 @@
+.page { background: var(--gray-50); min-height: 100%; }
+.topbar { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--black); }
+.back { background: none; border: none; font-size: 22px; color: #fff; cursor: pointer; }
+.title { font-size: 15px; font-weight: 500; color: #fff; flex: 1; }
+.badge { background: #e53935; color: #fff; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px; letter-spacing: 1px; }
+.tabs { display: flex; background: #fff; border-bottom: 2px solid var(--gray-100); }
+.tab { flex: 1; padding: 13px; font-size: 13px; font-weight: 500; color: var(--gray-400); background: none; border: none; border-bottom: 3px solid transparent; margin-bottom: -2px; cursor: pointer; }
+.tab.on { color: var(--black); border-bottom-color: var(--black); }
+.success { background: var(--green-light); color: var(--green); padding: 12px 16px; font-size: 13px; font-weight: 500; text-align: center; border-bottom: 1px solid #a5d6a7; }
+.content { padding: 14px; }
+.formCard { background: #fff; border: 2px solid var(--gray-200); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 20px; }
+.formTitle { font-size: 15px; font-weight: 500; color: var(--black); margin-bottom: 14px; }
+.input { width: 100%; padding: 11px 13px; border: 2px solid var(--gray-200); border-radius: var(--radius-md); font-size: 13px; background: var(--gray-50); color: var(--black); margin-bottom: 10px; outline: none; font-family: var(--font-body); }
+.input:focus { border-color: var(--black); background: #fff; }
+.textarea { width: 100%; padding: 11px 13px; border: 2px solid var(--gray-200); border-radius: var(--radius-md); font-size: 13px; background: var(--gray-50); color: var(--black); margin-bottom: 10px; outline: none; font-family: var(--font-body); min-height: 80px; resize: vertical; }
+.select { flex: 1; padding: 11px 12px; border: 2px solid var(--gray-200); border-radius: var(--radius-md); font-size: 13px; background: var(--gray-50); color: var(--black); font-family: var(--font-body); margin-bottom: 10px; outline: none; }
+.row { display: flex; gap: 10px; }
+.row .input, .row .select { margin-bottom: 10px; }
+.colorRow { display: flex; gap: 8px; margin-bottom: 12px; }
+.colorDot { width: 28px; height: 28px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; }
+.colorOn { border-color: var(--black); transform: scale(1.2); }
+.btnSubmit { width: 100%; padding: 13px; border-radius: var(--radius-md); background: var(--black); color: #fff; border: 2px solid var(--black); font-size: 14px; font-weight: 500; cursor: pointer; font-family: var(--font-body); }
+.btnSubmit:disabled { opacity: 0.5; cursor: not-allowed; }
+.listTitle { font-size: 13px; font-weight: 500; color: var(--gray-400); margin-bottom: 10px; }
+.listItem { display: flex; align-items: center; gap: 12px; padding: 12px; background: #fff; border: 2px solid var(--gray-200); border-radius: var(--radius-md); margin-bottom: 8px; }
+.listIco { width: 40px; height: 40px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+.listInfo { flex: 1; }
+.listName { font-size: 13px; font-weight: 500; color: var(--black); }
+.listMeta { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+.btnDelete { background: var(--red-light); color: var(--red); border: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 12px; font-weight: 700; flex-shrink: 0; }

@@ -6,7 +6,7 @@ const MY_EVENTS = [
   { id: 2, name: 'Erasmus Night', date: 'Sat 19 Apr', venue: 'Erasmus Zlín', emoji: '🎤', color: '#ede7f6' },
 ]
 
-export default function ProfilePage({ session }) {
+export default function ProfilePage({ session, isAdmin, onOpenAdmin }) {
   const name = session?.user?.user_metadata?.full_name || session?.user?.email?.split('@')[0] || 'Student'
   const initials = name.slice(0,1).toUpperCase()
 
@@ -45,6 +45,14 @@ export default function ProfilePage({ session }) {
           </div>
         ))}
       </div>
+
+      {isAdmin && (
+        <div style={{padding: '0 14px 24px'}}>
+          <button onClick={onOpenAdmin} style={{width:'100%', padding:'13px', borderRadius:'12px', background:'#111', color:'#fff', border:'2px solid #111', fontSize:'14px', fontWeight:'500', cursor:'pointer', fontFamily:'var(--font-body)'}}>
+            ⚙️ Admin Dashboard
+          </button>
+        </div>
+      )}
     </div>
   )
 }
