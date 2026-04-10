@@ -36,9 +36,10 @@
 html, body, #root {
   height: 100%;
   font-family: var(--font-body);
-  background: var(--gray-50);
-  color: var(--black);
+  background: #07080C;
+  color: #ffffff;
   -webkit-font-smoothing: antialiased;
+  scroll-behavior: smooth;
 }
 
 /* Mobile-first: max-width phone shell */
