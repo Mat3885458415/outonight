@@ -1,0 +1,56 @@
+.page { background: #fff; min-height: 100%; }
+.topbar { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--black); }
+.backBtn { background: none; border: none; font-size: 22px; color: #fff; cursor: pointer; line-height: 1; }
+.topTitle { font-size: 15px; font-weight: 500; color: #fff; }
+.hero { height: 160px; display: flex; align-items: center; justify-content: center; font-size: 54px; }
+.body { padding: 18px 16px; }
+.name { font-size: 20px; font-weight: 500; color: var(--black); }
+.sub { font-size: 13px; color: var(--gray-400); margin-top: 4px; }
+.stars { font-size: 13px; color: #e65100; font-weight: 500; margin-top: 4px; }
+.pills { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.pill { font-size: 12px; color: #444; background: var(--gray-100); padding: 5px 12px; border-radius: 8px; font-weight: 500; }
+.desc { font-size: 13px; color: #555; line-height: 1.7; margin-top: 14px; }
+.tagRow { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.tag { padding: 3px 10px; border-radius: 8px; font-size: 11px; background: var(--gray-100); color: var(--gray-800); border: 1px solid var(--gray-200); }
+
+.attendeeBox {
+  margin-top: 16px; width: 100%; display: flex; align-items: center; justify-content: space-between;
+  padding: 14px; background: var(--gray-50); border-radius: var(--radius-md);
+  border: 2px solid var(--gray-200); cursor: pointer; text-align: left;
+}
+.attendeeInfo {}
+.attendeeCount { font-size: 13px; font-weight: 500; color: var(--black); display: block; margin-bottom: 8px; }
+.avRow { display: flex; }
+.av { width: 28px; height: 28px; border-radius: 50%; border: 2px solid #fff; font-size: 11px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+.seeWho { font-size: 12px; font-weight: 500; color: var(--black); }
+
+.btnRow { display: flex; gap: 10px; margin-top: 16px; }
+.btnJoin { flex: 1; padding: 13px; border-radius: var(--radius-md); background: var(--black); color: #fff; border: 2px solid var(--black); font-size: 14px; font-weight: 500; cursor: pointer; transition: background 0.15s; }
+.btnJoin:hover { background: #333; }
+.btnJoin.joined { background: var(--green); border-color: var(--green); }
+.btnShare { padding: 13px 18px; border-radius: var(--radius-md); background: #fff; color: var(--black); border: 2px solid var(--gray-200); font-size: 14px; font-weight: 500; cursor: pointer; }
+
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: flex-end; justify-content: center; z-index: 200; padding: 16px; }
+.modal { width: 100%; max-width: 430px; background: #fff; border-radius: var(--radius-xl); padding: 18px; max-height: 75vh; overflow-y: auto; border: 2px solid var(--gray-200); }
+.modalHead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-size: 15px; font-weight: 500; color: var(--black); }
+.modalHead button { width: 30px; height: 30px; border-radius: 50%; background: var(--gray-100); border: none; cursor: pointer; font-weight: 500; }
+.attRow { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--gray-100); }
+.attRow:last-child { border-bottom: none; }
+.attAv { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; flex-shrink: 0; }
+.attName { font-size: 13px; font-weight: 500; color: var(--black); }
+.attUni { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
+
+.bookSection { margin-top: 20px; padding-top: 18px; border-top: 2px solid var(--gray-100); }
+.bookTitle { font-size: 15px; font-weight: 500; color: var(--black); }
+.bookSub { font-size: 12px; color: var(--gray-400); margin-top: 4px; }
+.slots { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.slot { padding: 9px 16px; border-radius: 10px; border: 2px solid var(--gray-200); font-size: 13px; color: var(--black); cursor: pointer; background: #fff; font-weight: 500; font-family: var(--font-body); transition: all 0.15s; }
+.slot:hover { border-color: var(--black); }
+.slotOn { background: var(--black); color: #fff; border-color: var(--black); }
+.slotFull { color: #bbb; text-decoration: line-through; cursor: not-allowed; background: var(--gray-50); }
+.bookRow { display: flex; gap: 10px; margin-top: 16px; }
+.select { flex: 1; padding: 11px 12px; border-radius: var(--radius-md); border: 2px solid var(--gray-200); background: var(--gray-50); color: var(--black); font-size: 13px; font-family: var(--font-body); }
+.reserveBtn { flex: 1; padding: 12px; border-radius: var(--radius-md); background: var(--black); color: #fff; border: 2px solid var(--black); font-size: 13px; font-weight: 500; cursor: pointer; font-family: var(--font-body); }
+.reserveBtn:hover { background: #333; }
+
+.confirmation { margin-top: 20px; padding: 20px; background: var(--green-light); border-radius: var(--radius-lg); border: 2px solid #a5d6a7; text-align: center; }
