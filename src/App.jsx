@@ -1,340 +1,610 @@
+import { AnimatePresence, motion } from "framer-motion";
+import { Bell, Compass, Home, MapPin, Search, Settings, Sparkles, Star, User } from "lucide-react";
 import { useMemo, useState } from "react";
 
-export default function App() {
-  const [activeTab, setActiveTab] = useState("Home");
-  const [selectedEventId, setSelectedEventId] = useState(1);
-  const [joinedEvents, setJoinedEvents] = useState([1]);
-  const [savedEvents, setSavedEvents] = useState([2]);
-  const [notifications, setNotifications] = useState([
-    { id: 1, type: "Friends", text: "3 friends are going to Techno Night #12", time: "Now", icon: "✨", cta: "View", read: false },
-    { id: 2, type: "Event", text: "Open Basketball 3v3 starts tomorrow at 14:00", time: "1 h ago", icon: "🏀", cta: "Join", read: false },
-    { id: 3, type: "Offer", text: "20% student discount at Pizzeria Modrá Hvězda", time: "3 h ago", icon: "🍕", cta: "Use", read: true },
-  ]);
+const EVENTS = [
+  {
+    id: 1,
+    title: "Techno Night #12",
+    venue: "Club Rubín",
+    time: "Tonight · 22:00",
+    date: "Friday",
+    attendees: 126,
+    price: "150 CZK",
+    tag: "Trending",
+    category: "Party",
+    emoji: "🎵",
+    distance: "8 min walk",
+    description: "The biggest student techno event this week with a strong crowd, fast entry, and a very social atmosphere.",
+    gradient: "from-violet-500/30 via-fuchsia-500/20 to-indigo-500/20",
+  },
+  {
+    id: 2,
+    title: "Thursday Happy Hour",
+    venue: "Bar Panorama",
+    time: "Tonight · 20:00",
+    date: "Thursday",
+    attendees: 57,
+    price: "80 CZK",
+    tag: "Student deal",
+    category: "Food",
+    emoji: "🍻",
+    distance: "12 min walk",
+    description: "Relaxed pre-party atmosphere, cheap drinks, and an easy meetup format for small groups.",
+    gradient: "from-sky-500/30 via-cyan-500/20 to-blue-500/20",
+  },
+  {
+    id: 3,
+    title: "Erasmus International Night",
+    venue: "Erasmus Zlín Hub",
+    time: "Sat · 21:00",
+    date: "Saturday",
+    attendees: 201,
+    price: "Free",
+    tag: "Popular",
+    category: "Erasmus",
+    emoji: "🎤",
+    distance: "15 min by bus",
+    description: "A high energy social night designed for Erasmus students and international meetups.",
+    gradient: "from-pink-500/30 via-rose-500/20 to-orange-500/20",
+  },
+  {
+    id: 4,
+    title: "Open Basketball 3v3",
+    venue: "TBU Sports Hall",
+    time: "Tomorrow · 14:00",
+    date: "Tomorrow",
+    attendees: 24,
+    price: "Free",
+    tag: "Active",
+    category: "Sport",
+    emoji: "🏀",
+    distance: "6 min walk",
+    description: "Casual student basketball with open registration and a friendly level.",
+    gradient: "from-amber-500/30 via-orange-500/20 to-yellow-500/20",
+  },
+];
+
+const NOTIFICATIONS_DATA = [
+  { id: 1, type: "Friends", icon: Sparkles, text: "3 friends are going to Techno Night #12", time: "Now", read: false },
+  { id: 2, type: "Event", icon: Star, text: "Open Basketball 3v3 starts tomorrow at 14:00", time: "1 h ago", read: false },
+  { id: 3, type: "Offer", icon: Bell, text: "20% student discount at Pizzeria Modrá Hvězda", time: "3 h ago", read: true },
+];
+
+const FILTERS = ["Tonight", "This week", "Party", "Erasmus", "Food", "Sport"];
+const TABS = [
+  { id: "home", label: "Home", icon: Home },
+  { id: "explore", label: "Explore", icon: Compass },
+  { id: "map", label: "Map", icon: MapPin },
+  { id: "profile", label: "Profile", icon: User },
+];
+
+export default function OutonightApp() {
+  const [route, setRoute] = useState({ tab: "home", eventId: 1 });
+  const [filters, setFilters] = useState(["Tonight"]);
+  const [joined, setJoined] = useState([1]);
+  const [saved, setSaved] = useState([2]);
+  const [notifications, setNotifications] = useState(NOTIFICATIONS_DATA);
+  const [editOpen, setEditOpen] = useState(false);
   const [profile, setProfile] = useState({
     name: "Matéo Dumont",
-    bio: "TBU Zlín · Erasmus · Looking for plans tonight",
-    mood: "Ready to go out",
+    bio: "TBU Zlín · Erasmus student",
+    mood: "Looking for plans tonight",
   });
-  const [editingProfile, setEditingProfile] = useState(false);
-  const [draftProfile, setDraftProfile] = useState(profile);
-  const [filters, setFilters] = useState(["Tonight"]);
+  const [draft, setDraft] = useState(profile);
 
-  const events = [
-    { id: 1, title: "Techno Night #12", place: "Club Rubín", time: "Tonight · 22:00", date: "Friday", going: 126, price: "150 CZK", tag: "Trending", emoji: "🎵", color: "from-violet-500/30 to-fuchsia-500/20", description: "The biggest student techno event this week.", walk: "8 min walk from TBU", category: "Party" },
-    { id: 2, title: "Thursday Happy Hour", place: "Bar Panorama", time: "Tonight · 20:00", date: "Thursday", going: 57, price: "80 CZK", tag: "Student deal", emoji: "🍻", color: "from-sky-500/30 to-cyan-500/20", description: "Relaxed pre-party atmosphere with low prices.", walk: "12 min walk from TBU", category: "Food" },
-    { id: 3, title: "Erasmus International Night", place: "Erasmus Zlín", time: "Sat · 21:00", date: "Saturday", going: 201, price: "Free", tag: "Popular", emoji: "🎤", color: "from-pink-500/25 to-rose-500/20", description: "A high energy social night for Erasmus students.", walk: "15 min by bus", category: "Erasmus" },
-    { id: 4, title: "Open Basketball 3v3", place: "TBU Sports Hall", time: "Tomorrow · 14:00", date: "Tomorrow", going: 24, price: "Free", tag: "Active", emoji: "🏀", color: "from-orange-500/25 to-amber-500/20", description: "Casual student basketball with open registration.", walk: "6 min walk from campus", category: "Sport" },
-  ];
+  const selectedEvent = useMemo(
+    () => EVENTS.find((event) => event.id === route.eventId) ?? EVENTS[0],
+    [route.eventId]
+  );
 
-  const places = [
-    { title: "Pizzeria Modrá Hvězda", meta: "4.2 · 120m away · Student deal", emoji: "🍕" },
-    { title: "Asian Garden", meta: "4.8 · 400m away · Budget friendly", emoji: "🍜" },
-    { title: "Steakhouse Zlín", meta: "4.4 · 600m away · Group bookings", emoji: "🥩" },
-  ];
-
-  const selectedEvent = useMemo(() => events.find(e => e.id === selectedEventId) || events[0], [selectedEventId]);
-  const availableFilters = ["Tonight", "This week", "Party", "Erasmus", "Food", "Sport"];
   const filteredEvents = useMemo(() => {
-    if (filters.length === 0) return events;
-    return events.filter(e => filters.some(f => {
-      if (f === "Tonight") return e.time.toLowerCase().includes("tonight");
-      if (f === "This week") return true;
-      return e.category === f;
-    }));
+    if (filters.length === 0) return EVENTS;
+    return EVENTS.filter((event) =>
+      filters.some((filter) => {
+        if (filter === "Tonight") return event.time.toLowerCase().includes("tonight");
+        if (filter === "This week") return true;
+        return event.category === filter;
+      })
+    );
   }, [filters]);
 
-  function toggleJoin(id) { setJoinedEvents(c => c.includes(id) ? c.filter(i => i !== id) : [...c, id]); }
-  function toggleSave(id) { setSavedEvents(c => c.includes(id) ? c.filter(i => i !== id) : [...c, id]); }
-  function toggleFilter(f) { setFilters(c => c.includes(f) ? c.filter(i => i !== f) : [...c, f]); }
-  function openEvent(id) { setSelectedEventId(id); setActiveTab("Event"); }
-  function markNotificationRead(id) { setNotifications(c => c.map(n => n.id === id ? {...n, read: true} : n)); }
-  function markAllRead() { setNotifications(c => c.map(n => ({...n, read: true}))); }
-  function saveProfile() { setProfile(draftProfile); setEditingProfile(false); }
+  function navigate(tab, eventId = route.eventId) {
+    setRoute({ tab, eventId });
+  }
 
-  const tabs = ["Home", "Explore", "Event", "Profile"];
+  function openEvent(eventId) {
+    setRoute({ tab: "event", eventId });
+  }
+
+  function toggleFilter(filter) {
+    setFilters((current) =>
+      current.includes(filter) ? current.filter((item) => item !== filter) : [...current, filter]
+    );
+  }
+
+  function toggleJoin(eventId) {
+    setJoined((current) =>
+      current.includes(eventId) ? current.filter((id) => id !== eventId) : [...current, eventId]
+    );
+  }
+
+  function toggleSave(eventId) {
+    setSaved((current) =>
+      current.includes(eventId) ? current.filter((id) => id !== eventId) : [...current, eventId]
+    );
+  }
+
+  function markRead(id) {
+    setNotifications((current) => current.map((item) => (item.id === id ? { ...item, read: true } : item)));
+  }
+
+  function markAllRead() {
+    setNotifications((current) => current.map((item) => ({ ...item, read: true })));
+  }
+
+  function saveProfile() {
+    setProfile(draft);
+    setEditOpen(false);
+  }
 
   return (
-    <div style={{minHeight:'100dvh', background:'#05060A', display:'flex', alignItems:'center', justifyContent:'center', padding:'24px', fontFamily:"'DM Sans', sans-serif"}}>
-      <div style={{width:'100%', maxWidth:430}}>
-        {/* Phone frame */}
-        <div style={{borderRadius:38, border:'1px solid rgba(255,255,255,0.1)', background:'#0B0C11', padding:12, boxShadow:'0 30px 120px rgba(0,0,0,0.45)'}}>
-          <div style={{overflow:'hidden', borderRadius:30, border:'1px solid rgba(255,255,255,0.08)', background:'#101118'}}>
-            {/* Status bar */}
-            <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:'1px solid rgba(255,255,255,0.06)', padding:'12px 16px'}}>
-              <div>
-                <p style={{fontSize:11, textTransform:'uppercase', letterSpacing:'0.22em', color:'rgba(255,255,255,0.4)'}}>OUTONIGHT</p>
-                <p style={{marginTop:4, fontSize:14, fontWeight:500, color:'rgba(255,255,255,0.9)'}}>{activeTab}</p>
-              </div>
-              <div style={{display:'flex', alignItems:'center', gap:6, fontSize:10, color:'rgba(255,255,255,0.45)'}}>
-                <span style={{width:8, height:8, borderRadius:'50%', background:'#34d399', display:'inline-block'}}/>
-                Live
-              </div>
-            </div>
+    <div className="min-h-screen bg-[#07080C] text-white">
+      <div className="mx-auto min-h-screen max-w-md bg-[radial-gradient(circle_at_top,_rgba(111,76,255,0.18),_transparent_28%),linear-gradient(180deg,#0B0C11_0%,#08090D_100%)]">
+        <div className="sticky top-0 z-30 border-b border-white/6 bg-[#0B0C11]/80 px-4 pb-3 pt-[max(env(safe-area-inset-top),16px)] backdrop-blur-xl">
+          <TopBar route={route} onBack={() => navigate("explore", route.eventId)} unreadCount={notifications.filter((n) => !n.read).length} />
+        </div>
 
-            {/* Screen content */}
-            <div style={{height:680, overflowY:'auto', background:'#0B0C11', padding:16}}>
-              {activeTab === "Home" && <HomeScreen events={events} places={places} joinedEvents={joinedEvents} openEvent={openEvent} toggleJoin={toggleJoin} />}
-              {activeTab === "Explore" && <ExploreScreen events={filteredEvents} filters={filters} availableFilters={availableFilters} toggleFilter={toggleFilter} savedEvents={savedEvents} joinedEvents={joinedEvents} toggleSave={toggleSave} toggleJoin={toggleJoin} openEvent={openEvent} />}
-              {activeTab === "Event" && <EventScreen event={selectedEvent} isJoined={joinedEvents.includes(selectedEvent.id)} isSaved={savedEvents.includes(selectedEvent.id)} toggleJoin={toggleJoin} toggleSave={toggleSave} />}
-              {activeTab === "Profile" && <ProfileScreen profile={profile} draftProfile={draftProfile} setDraftProfile={setDraftProfile} editingProfile={editingProfile} setEditingProfile={setEditingProfile} saveProfile={saveProfile} notifications={notifications} markNotificationRead={markNotificationRead} markAllRead={markAllRead} joinedCount={joinedEvents.length} />}
-            </div>
+        <main className="px-4 pb-28 pt-4">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={`${route.tab}-${route.eventId}`}
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.22, ease: "easeOut" }}
+            >
+              {route.tab === "home" && (
+                <HomeScreen
+                  events={EVENTS}
+                  joined={joined}
+                  openEvent={openEvent}
+                  toggleJoin={toggleJoin}
+                />
+              )}
+              {route.tab === "explore" && (
+                <ExploreScreen
+                  events={filteredEvents}
+                  filters={filters}
+                  joined={joined}
+                  saved={saved}
+                  onToggleFilter={toggleFilter}
+                  onToggleJoin={toggleJoin}
+                  onToggleSave={toggleSave}
+                  onOpenEvent={openEvent}
+                />
+              )}
+              {route.tab === "event" && (
+                <EventScreen
+                  event={selectedEvent}
+                  isJoined={joined.includes(selectedEvent.id)}
+                  isSaved={saved.includes(selectedEvent.id)}
+                  onJoin={() => toggleJoin(selectedEvent.id)}
+                  onSave={() => toggleSave(selectedEvent.id)}
+                />
+              )}
+              {route.tab === "map" && <MapScreen events={EVENTS} openEvent={openEvent} />}
+              {route.tab === "profile" && (
+                <ProfileScreen
+                  profile={profile}
+                  draft={draft}
+                  setDraft={setDraft}
+                  editOpen={editOpen}
+                  setEditOpen={setEditOpen}
+                  saveProfile={saveProfile}
+                  notifications={notifications}
+                  markRead={markRead}
+                  markAllRead={markAllRead}
+                  joinedCount={joined.length}
+                />
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </main>
 
-            {/* Bottom nav */}
-            <div style={{display:'grid', gridTemplateColumns:'repeat(4,1fr)', borderTop:'1px solid rgba(255,255,255,0.06)', background:'rgba(0,0,0,0.3)', padding:'8px 8px'}}>
-              {tabs.map(tab => (
-                <button key={tab} onClick={() => setActiveTab(tab)} style={{display:'flex', flexDirection:'column', alignItems:'center', gap:4, background:'none', border:'none', cursor:'pointer', padding:'4px 0'}}>
-                  <div style={{width:36, height:36, borderRadius:12, display:'flex', alignItems:'center', justifyContent:'center', background: activeTab===tab ? '#fff' : 'rgba(255,255,255,0.05)', color: activeTab===tab ? '#000' : 'rgba(255,255,255,0.6)', fontSize:16}}>
-                    {tab==="Home" ? "⌂" : tab==="Explore" ? "⌕" : tab==="Event" ? "◔" : "◡"}
-                  </div>
-                  <span style={{fontSize:10, color: activeTab===tab ? '#fff' : 'rgba(255,255,255,0.5)'}}>{tab}</span>
+        <div className="fixed bottom-0 left-0 right-0 z-40 mx-auto max-w-md border-t border-white/8 bg-[#0B0C11]/90 px-3 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 backdrop-blur-2xl">
+          <nav className="grid grid-cols-4 gap-2">
+            {TABS.map((tab) => {
+              const Icon = tab.icon;
+              const active = route.tab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => navigate(tab.id)}
+                  className={`flex flex-col items-center gap-1 rounded-2xl px-2 py-2 transition ${active ? "bg-white text-[#0B0C11]" : "bg-white/5 text-white/60 hover:bg-white/10"}`}
+                >
+                  <Icon size={18} />
+                  <span className="text-[11px] font-medium">{tab.label}</span>
                 </button>
-              ))}
-            </div>
-          </div>
+              );
+            })}
+          </nav>
         </div>
       </div>
     </div>
   );
 }
 
-function HomeScreen({ events, places, joinedEvents, openEvent, toggleJoin }) {
+function TopBar({ route, onBack, unreadCount }) {
+  const titleMap = {
+    home: "Tonight in Zlín",
+    explore: "Explore",
+    event: "Event details",
+    map: "Map",
+    profile: "Profile",
+  };
+
   return (
-    <div style={{display:'flex', flexDirection:'column', gap:20}}>
-      <div style={{borderRadius:30, border:'1px solid rgba(255,255,255,0.1)', background:'radial-gradient(circle at top left, rgba(140,92,255,0.38), rgba(13,14,21,0.96) 55%)', padding:20}}>
-        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
-          <div>
-            <p style={{fontSize:11, textTransform:'uppercase', letterSpacing:'0.3em', color:'rgba(167,139,250,0.8)'}}>Tonight in Zlín</p>
-            <h2 style={{marginTop:8, fontSize:26, fontWeight:600, color:'#fff', lineHeight:1.2}}>What are you doing tonight?</h2>
-            <p style={{marginTop:12, fontSize:13, color:'rgba(255,255,255,0.7)'}}>12 events · 340 students active</p>
-          </div>
-          <div style={{width:48, height:48, borderRadius:'50%', border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.1)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:20}}>🌙</div>
-        </div>
-        <div style={{marginTop:20, borderRadius:26, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(0,0,0,0.2)', padding:16}}>
-          <div style={{display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12}}>
-            <div>
-              <div style={{display:'inline-flex', borderRadius:99, background:'rgba(251,113,133,0.15)', padding:'4px 10px', fontSize:11, fontWeight:500, color:'#fecdd3'}}>Best pick tonight</div>
-              <h3 style={{marginTop:12, fontSize:22, fontWeight:600, color:'#fff'}}>{events[0].title}</h3>
-              <p style={{marginTop:4, fontSize:13, color:'rgba(255,255,255,0.75)'}}>{events[0].place} · 22:00 · {events[0].price}</p>
-              <p style={{marginTop:12, fontSize:13, color:'rgba(255,255,255,0.9)'}}>Anna, Pedro and 124 others going</p>
-            </div>
-            <div style={{width:80, height:80, borderRadius:24, background:'rgba(255,255,255,0.1)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:36, flexShrink:0}}>{events[0].emoji}</div>
-          </div>
-          <div style={{marginTop:16, display:'grid', gridTemplateColumns:'1fr 1fr', gap:12}}>
-            <button onClick={() => toggleJoin(events[0].id)} style={{borderRadius:16, background:'#fff', padding:'12px 0', fontSize:14, fontWeight:600, color:'#0A0A0F', border:'none', cursor:'pointer'}}>
-              {joinedEvents.includes(events[0].id) ? "✓ Joined" : "Join now"}
-            </button>
-            <button onClick={() => openEvent(events[0].id)} style={{borderRadius:16, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.05)', padding:'12px 0', fontSize:14, color:'rgba(255,255,255,0.85)', cursor:'pointer'}}>
-              View event
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <p style={{fontSize:15, fontWeight:600, color:'#fff'}}>🔥 Trending now</p>
-      {events.slice(0,3).map(ev => (
-        <button key={ev.id} onClick={() => openEvent(ev.id)} style={{display:'flex', alignItems:'center', gap:12, borderRadius:24, border:'1px solid rgba(255,255,255,0.08)', background:'rgba(255,255,255,0.05)', padding:12, textAlign:'left', width:'100%', cursor:'pointer', marginBottom:8}}>
-          <div style={{width:64, height:64, borderRadius:20, background:'rgba(124,58,237,0.3)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, flexShrink:0}}>{ev.emoji}</div>
-          <div style={{flex:1, minWidth:0}}>
-            <p style={{fontSize:13, fontWeight:600, color:'#fff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{ev.title}</p>
-            <p style={{marginTop:4, fontSize:12, color:'rgba(255,255,255,0.55)'}}>{ev.time} · {ev.place}</p>
-            <p style={{marginTop:4, fontSize:12, color:'#a78bfa'}}>{ev.going} going</p>
-          </div>
-          <div style={{borderRadius:16, border:'1px solid rgba(255,255,255,0.1)', padding:'8px 12px', fontSize:12, color:'rgba(255,255,255,0.8)', flexShrink:0}}>Open</div>
-        </button>
-      ))}
-
-      <p style={{fontSize:15, fontWeight:600, color:'#fff'}}>🍽 Food & deals nearby</p>
-      {places.map(p => (
-        <div key={p.title} style={{display:'flex', alignItems:'center', gap:12, borderRadius:24, border:'1px solid rgba(255,255,255,0.08)', background:'rgba(255,255,255,0.05)', padding:12, marginBottom:8}}>
-          <div style={{width:56, height:56, borderRadius:18, background:'rgba(255,255,255,0.1)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:24}}>{p.emoji}</div>
-          <div style={{flex:1, minWidth:0}}>
-            <p style={{fontSize:13, fontWeight:500, color:'#fff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{p.title}</p>
-            <p style={{fontSize:12, color:'rgba(255,255,255,0.55)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}}>{p.meta}</p>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function ExploreScreen({ events, filters, availableFilters, toggleFilter, savedEvents, joinedEvents, toggleSave, toggleJoin, openEvent }) {
-  return (
-    <div style={{display:'flex', flexDirection:'column', gap:16}}>
-      <div>
-        <p style={{fontSize:11, textTransform:'uppercase', letterSpacing:'0.28em', color:'rgba(167,139,250,0.8)'}}>Discover</p>
-        <h2 style={{marginTop:8, fontSize:24, fontWeight:600, color:'#fff'}}>Find your next plan</h2>
-      </div>
-      <div style={{display:'flex', alignItems:'center', gap:12, borderRadius:16, border:'1px solid rgba(255,255,255,0.08)', background:'rgba(255,255,255,0.05)', padding:'12px 16px', fontSize:13, color:'rgba(255,255,255,0.45)'}}>
-        <span>⌕</span><span>Search events, clubs, restaurants...</span>
-      </div>
-      <div style={{display:'flex', gap:8, overflowX:'auto', paddingBottom:4}}>
-        {availableFilters.map(f => (
-          <button key={f} onClick={() => toggleFilter(f)} style={{whiteSpace:'nowrap', borderRadius:99, padding:'8px 16px', fontSize:13, border: filters.includes(f) ? 'none' : '1px solid rgba(255,255,255,0.1)', background: filters.includes(f) ? '#fff' : 'rgba(255,255,255,0.05)', color: filters.includes(f) ? '#000' : 'rgba(255,255,255,0.8)', cursor:'pointer', flexShrink:0}}>
-            {f}
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-3">
+        {route.tab === "event" ? (
+          <button onClick={onBack} className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm text-white/80">
+            Back
           </button>
+        ) : (
+          <div className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-base">
+            🌙
+          </div>
+        )}
+        <div>
+          <p className="text-[11px] uppercase tracking-[0.24em] text-violet-300/75">Outonight</p>
+          <h1 className="text-base font-semibold">{titleMap[route.tab]}</h1>
+        </div>
+      </div>
+      <button className="relative flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/80">
+        <Bell size={18} />
+        {unreadCount > 0 && <span className="absolute right-2 top-2 h-2.5 w-2.5 rounded-full bg-violet-400" />}
+      </button>
+    </div>
+  );
+}
+
+function HomeScreen({ events, joined, openEvent, toggleJoin }) {
+  return (
+    <div className="space-y-6">
+      <motion.section layout className="rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(126,87,255,0.38),_rgba(13,14,21,0.96)_55%)] p-5 shadow-[0_20px_80px_rgba(63,32,160,0.28)]">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.28em] text-violet-200/75">Best pick tonight</p>
+            <h2 className="mt-2 text-[30px] font-semibold leading-none">{events[0].title}</h2>
+            <p className="mt-3 text-sm text-white/72">{events[0].venue} · {events[0].time}</p>
+            <p className="mt-1 text-sm text-white/90">{events[0].attendees} students going</p>
+          </div>
+          <div className="flex h-20 w-20 items-center justify-center rounded-[24px] bg-white/10 text-4xl">{events[0].emoji}</div>
+        </div>
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <button onClick={() => toggleJoin(events[0].id)} className="rounded-2xl bg-white py-3 text-sm font-semibold text-[#0B0C11] transition active:scale-[0.98]">
+            {joined.includes(events[0].id) ? "Going" : "Join now"}
+          </button>
+          <button onClick={() => openEvent(events[0].id)} className="rounded-2xl border border-white/10 bg-white/5 py-3 text-sm text-white/85 transition active:scale-[0.98]">
+            View event
+          </button>
+        </div>
+      </motion.section>
+
+      <section>
+        <SectionHeader title="Trending now" action="Open" />
+        <div className="mt-3 space-y-3">
+          {events.slice(0, 3).map((event, index) => (
+            <motion.button
+              key={event.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.04 }}
+              onClick={() => openEvent(event.id)}
+              className="flex w-full items-center gap-3 rounded-[24px] border border-white/8 bg-white/5 p-3 text-left transition hover:bg-white/[0.07] active:scale-[0.99]"
+            >
+              <div className={`flex h-16 w-16 items-center justify-center rounded-[20px] bg-gradient-to-br ${event.gradient} text-3xl`}>
+                {event.emoji}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold">{event.title}</p>
+                <p className="mt-1 truncate text-xs text-white/55">{event.time} · {event.venue}</p>
+                <p className="mt-1 text-xs text-violet-200">{event.attendees} going</p>
+              </div>
+            </motion.button>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function ExploreScreen({ events, filters, joined, saved, onToggleFilter, onToggleJoin, onToggleSave, onOpenEvent }) {
+  return (
+    <div className="space-y-5">
+      <SearchInput />
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+        {FILTERS.map((filter) => {
+          const active = filters.includes(filter);
+          return (
+            <button
+              key={filter}
+              onClick={() => onToggleFilter(filter)}
+              className={`whitespace-nowrap rounded-full px-4 py-2 text-sm transition ${active ? "bg-white text-[#0B0C11]" : "border border-white/10 bg-white/5 text-white/80"}`}
+            >
+              {filter}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="space-y-4">
+        {events.map((event, index) => (
+          <motion.div
+            key={event.id}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.04 }}
+            className="overflow-hidden rounded-[28px] border border-white/8 bg-white/5"
+          >
+            <button onClick={() => onOpenEvent(event.id)} className="block w-full text-left">
+              <div className={`flex h-40 items-center justify-center bg-gradient-to-br ${event.gradient} text-5xl`}>
+                {event.emoji}
+              </div>
+            </button>
+            <div className="p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <button onClick={() => onOpenEvent(event.id)} className="text-left text-lg font-semibold hover:text-violet-200">
+                    {event.title}
+                  </button>
+                  <p className="mt-1 text-sm text-white/60">{event.time}</p>
+                  <p className="text-sm text-white/60">{event.venue}</p>
+                </div>
+                <button onClick={() => onToggleSave(event.id)} className="rounded-2xl border border-white/10 px-3 py-2 text-xs text-white/85">
+                  {saved.includes(event.id) ? "Saved" : "Save"}
+                </button>
+              </div>
+              <div className="mt-4 flex items-center justify-between text-sm">
+                <span className="text-white/75">{event.attendees} going</span>
+                <span className="font-medium text-violet-300">{event.price}</span>
+              </div>
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <button onClick={() => onToggleJoin(event.id)} className="rounded-2xl bg-white py-3 text-sm font-semibold text-[#0B0C11] transition active:scale-[0.98]">
+                  {joined.includes(event.id) ? "Going" : "Join"}
+                </button>
+                <button onClick={() => onOpenEvent(event.id)} className="rounded-2xl border border-white/10 bg-white/5 py-3 text-sm text-white/85 transition active:scale-[0.98]">
+                  View
+                </button>
+              </div>
+            </div>
+          </motion.div>
         ))}
       </div>
-      {events.map(ev => (
-        <div key={ev.id} style={{borderRadius:28, border:'1px solid rgba(255,255,255,0.08)', background:'rgba(255,255,255,0.05)', padding:12, marginBottom:4}}>
-          <button onClick={() => openEvent(ev.id)} style={{width:'100%', background:'none', border:'none', cursor:'pointer', padding:0}}>
-            <div style={{height:140, borderRadius:22, background:'rgba(124,58,237,0.25)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:48}}>{ev.emoji}</div>
-          </button>
-          <div style={{marginTop:12, display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:12}}>
-            <div>
-              <button onClick={() => openEvent(ev.id)} style={{background:'none', border:'none', cursor:'pointer', padding:0, fontSize:15, fontWeight:600, color:'#fff', textAlign:'left'}}>{ev.title}</button>
-              <p style={{marginTop:4, fontSize:13, color:'rgba(255,255,255,0.6)'}}>{ev.time} · {ev.place}</p>
-            </div>
-            <button onClick={() => toggleSave(ev.id)} style={{borderRadius:16, border:'1px solid rgba(255,255,255,0.1)', padding:'8px 12px', fontSize:12, color:'rgba(255,255,255,0.8)', background:'rgba(255,255,255,0.05)', cursor:'pointer', flexShrink:0}}>
-              {savedEvents.includes(ev.id) ? "✓ Saved" : "Save"}
-            </button>
-          </div>
-          <div style={{marginTop:12, display:'flex', alignItems:'center', justifyContent:'space-between', fontSize:13}}>
-            <span style={{color:'rgba(255,255,255,0.75)'}}>{ev.going} going</span>
-            <span style={{fontWeight:600, color:'#a78bfa'}}>{ev.price}</span>
-          </div>
-          <div style={{marginTop:12, display:'grid', gridTemplateColumns:'1fr 1fr', gap:12}}>
-            <button onClick={() => toggleJoin(ev.id)} style={{borderRadius:16, background:'#fff', padding:'12px 0', fontSize:13, fontWeight:600, color:'#0A0A0F', border:'none', cursor:'pointer'}}>
-              {joinedEvents.includes(ev.id) ? "✓ Joined" : "Join"}
-            </button>
-            <button onClick={() => openEvent(ev.id)} style={{borderRadius:16, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.05)', padding:'12px 0', fontSize:13, color:'rgba(255,255,255,0.85)', cursor:'pointer'}}>
-              View
-            </button>
-          </div>
-        </div>
-      ))}
     </div>
   );
 }
 
-function EventScreen({ event, isJoined, isSaved, toggleJoin, toggleSave }) {
+function EventScreen({ event, isJoined, isSaved, onJoin, onSave }) {
   return (
-    <div style={{display:'flex', flexDirection:'column', gap:16}}>
-      <div style={{position:'relative', height:240, overflow:'hidden', borderRadius:32, border:'1px solid rgba(255,255,255,0.1)', background:'linear-gradient(135deg, rgba(109,40,217,0.85), rgba(49,46,129,0.6), #161720)', padding:20}}>
-        <div style={{position:'relative', height:'100%', display:'flex', flexDirection:'column', justifyContent:'space-between'}}>
-          <div style={{display:'flex', alignItems:'center', justifyContent:'space-between'}}>
-            <div style={{borderRadius:99, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(0,0,0,0.2)', padding:'6px 12px', fontSize:12}}>{event.tag}</div>
-            <div style={{borderRadius:99, background:'rgba(52,211,153,0.15)', padding:'6px 12px', fontSize:12, color:'#6ee7b7'}}>{event.going} going</div>
-          </div>
-          <div>
-            <p style={{fontSize:13, color:'rgba(255,255,255,0.7)'}}>{event.date} · {event.time} · {event.place}</p>
-            <h2 style={{marginTop:8, fontSize:28, fontWeight:600, color:'#fff', lineHeight:1.2}}>{event.title}</h2>
-            <p style={{marginTop:12, fontSize:13, color:'rgba(255,255,255,0.78)', lineHeight:1.6, maxWidth:240}}>{event.description}</p>
+    <div className="space-y-5">
+      <motion.section layout className="overflow-hidden rounded-[30px] border border-white/10 bg-[#11131B]">
+        <div className={`relative flex h-64 items-end bg-gradient-to-br ${event.gradient} p-5`}>
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.05),rgba(0,0,0,0.55))]" />
+          <div className="relative">
+            <div className="mb-3 inline-flex rounded-full border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/85">{event.tag}</div>
+            <h2 className="text-3xl font-semibold">{event.title}</h2>
+            <p className="mt-2 text-sm text-white/85">{event.date} · {event.time}</p>
+            <p className="text-sm text-white/75">{event.venue}</p>
           </div>
         </div>
+      </motion.section>
+
+      <div className="grid grid-cols-3 gap-3">
+        <StatCard value={event.price} label="Entry" />
+        <StatCard value={event.distance} label="Access" />
+        <StatCard value={String(event.attendees)} label="Going" />
       </div>
 
-      <div style={{display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12}}>
-        {[[event.price,'Entry'],[event.walk,'Access'],[event.category,'Type']].map(([v,l]) => (
-          <div key={l} style={{borderRadius:22, border:'1px solid rgba(255,255,255,0.08)', background:'rgba(255,255,255,0.05)', padding:12, textAlign:'center'}}>
-            <p style={{fontSize:13, fontWeight:600, color:'#fff'}}>{v}</p>
-            <p style={{marginTop:4, fontSize:11, color:'rgba(255,255,255,0.55)'}}>{l}</p>
-          </div>
-        ))}
-      </div>
-
-      <div style={{borderRadius:28, border:'1px solid rgba(255,255,255,0.08)', background:'rgba(255,255,255,0.05)', padding:16}}>
-        <p style={{fontSize:15, fontWeight:600, color:'#fff', marginBottom:16}}>Friends going</p>
-        <div style={{display:'flex', alignItems:'center', gap:12}}>
-          <div style={{display:'flex'}}>
-            {['A','P','L','M'].map((a,i) => (
-              <div key={i} style={{width:44, height:44, borderRadius:'50%', border:'2px solid #0B0C11', background:'#c4b5fd', display:'flex', alignItems:'center', justifyContent:'center', fontSize:14, fontWeight:600, color:'#1d2358', marginLeft:i>0?-12:0}}>{a}</div>
-            ))}
-          </div>
-          <p style={{fontSize:13, color:'rgba(255,255,255,0.7)'}}>Anna, Pedro, Lena and 123 others</p>
-        </div>
-      </div>
-
-      <div style={{borderRadius:28, border:'1px solid rgba(255,255,255,0.08)', background:'rgba(255,255,255,0.05)', padding:16}}>
-        <p style={{fontSize:15, fontWeight:600, color:'#fff', marginBottom:16}}>Actions</p>
-        <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12}}>
-          <button onClick={() => toggleJoin(event.id)} style={{borderRadius:16, background:'#fff', padding:'12px 0', fontSize:13, fontWeight:600, color:'#0A0A0F', border:'none', cursor:'pointer'}}>
-            {isJoined ? "✓ Going" : "Join event"}
+      <section className="rounded-[28px] border border-white/8 bg-white/5 p-4">
+        <SectionHeader title="About this event" />
+        <p className="mt-3 text-sm leading-6 text-white/72">{event.description}</p>
+        <div className="mt-5 grid grid-cols-2 gap-3">
+          <button onClick={onJoin} className="rounded-2xl bg-white py-3 text-sm font-semibold text-[#0B0C11] transition active:scale-[0.98]">
+            {isJoined ? "Marked as going" : "Join event"}
           </button>
-          <button onClick={() => toggleSave(event.id)} style={{borderRadius:16, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.05)', padding:'12px 0', fontSize:13, color:'rgba(255,255,255,0.85)', cursor:'pointer'}}>
-            {isSaved ? "✓ Saved" : "Save"}
+          <button onClick={onSave} className="rounded-2xl border border-white/10 bg-white/5 py-3 text-sm text-white/85 transition active:scale-[0.98]">
+            {isSaved ? "Saved" : "Save"}
           </button>
         </div>
-        <button style={{marginTop:12, width:'100%', borderRadius:16, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.04)', padding:'12px 0', fontSize:13, color:'rgba(255,255,255,0.8)', cursor:'pointer'}}>
+        <button className="mt-3 w-full rounded-2xl border border-white/10 bg-white/[0.04] py-3 text-sm text-white/80 transition active:scale-[0.98]">
           Share with friends
         </button>
+      </section>
+
+      <section className="rounded-[28px] border border-white/8 bg-white/5 p-4">
+        <SectionHeader title="Who is going" action="Invite" />
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <div className="flex -space-x-3">
+            {['A', 'P', 'L', 'M'].map((letter) => (
+              <div key={letter} className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-[#0B0C11] bg-violet-200 text-sm font-semibold text-[#1D2358]">
+                {letter}
+              </div>
+            ))}
+          </div>
+          <p className="text-sm text-white/70">Anna, Pedro, Lena and more</p>
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function MapScreen({ events, openEvent }) {
+  return (
+    <div className="space-y-5">
+      <div className="relative overflow-hidden rounded-[30px] border border-white/8 bg-[#10131B] p-4">
+        <div className="absolute inset-0 opacity-25 [background-image:linear-gradient(rgba(255,255,255,0.08)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.08)_1px,transparent_1px)] [background-size:26px_26px]" />
+        <div className="relative h-[420px] rounded-[24px] bg-[radial-gradient(circle_at_center,_rgba(122,92,255,0.16),_transparent_55%)]">
+          {events.map((event, index) => {
+            const positions = ["left-[14%] top-[25%]", "left-[55%] top-[35%]", "left-[34%] top-[62%]", "left-[72%] top-[18%]"];
+            return (
+              <button
+                key={event.id}
+                onClick={() => openEvent(event.id)}
+                className={`absolute ${positions[index]} flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2`}
+              >
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-xl shadow-lg shadow-violet-900/30">{event.emoji}</div>
+                <div className="rounded-full border border-white/10 bg-[#0B0C11]/80 px-3 py-1 text-xs text-white/90 backdrop-blur">{event.title}</div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+      <div className="space-y-3">
+        {events.slice(0, 3).map((event) => (
+          <button key={event.id} onClick={() => openEvent(event.id)} className="flex w-full items-center justify-between rounded-[22px] border border-white/8 bg-white/5 p-4 text-left">
+            <div>
+              <p className="text-sm font-semibold">{event.title}</p>
+              <p className="mt-1 text-xs text-white/55">{event.venue} · {event.distance}</p>
+            </div>
+            <span className="text-lg">{event.emoji}</span>
+          </button>
+        ))}
       </div>
     </div>
   );
 }
 
-function ProfileScreen({ profile, draftProfile, setDraftProfile, editingProfile, setEditingProfile, saveProfile, notifications, markNotificationRead, markAllRead, joinedCount }) {
-  const unreadCount = notifications.filter(n => !n.read).length;
+function ProfileScreen({ profile, draft, setDraft, editOpen, setEditOpen, saveProfile, notifications, markRead, markAllRead, joinedCount }) {
+  const unread = notifications.filter((item) => !item.read).length;
+
   return (
-    <div style={{display:'flex', flexDirection:'column', gap:16}}>
-      <div style={{overflow:'hidden', borderRadius:30, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.05)'}}>
-        <div style={{height:96, background:'radial-gradient(circle at top, rgba(140,92,255,0.75), rgba(23,24,32,0.4) 65%)'}}/>
-        <div style={{padding:'0 20px 20px'}}>
-          <div style={{marginTop:-40, display:'flex', alignItems:'flex-end', justifyContent:'space-between', gap:12}}>
-            <div style={{display:'flex', alignItems:'center', gap:12}}>
-              <div style={{width:80, height:80, borderRadius:'50%', border:'4px solid #0B0C11', background:'#c4b5fd', display:'flex', alignItems:'center', justifyContent:'center', fontSize:28, fontWeight:600, color:'#23306e', flexShrink:0}}>M</div>
-              <div style={{paddingTop:36}}>
-                <h2 style={{fontSize:18, fontWeight:600, color:'#fff'}}>{profile.name}</h2>
-                <p style={{marginTop:4, fontSize:12, color:'rgba(255,255,255,0.6)'}}>{profile.bio}</p>
+    <div className="space-y-5">
+      <section className="overflow-hidden rounded-[30px] border border-white/8 bg-white/5">
+        <div className="h-28 bg-[radial-gradient(circle_at_top,_rgba(126,87,255,0.7),_rgba(20,21,30,0.35)_65%)]" />
+        <div className="px-5 pb-5">
+          <div className="-mt-10 flex items-end justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-[#0B0C11] bg-violet-200 text-3xl font-semibold text-[#23306E]">M</div>
+              <div>
+                <h2 className="text-xl font-semibold">{profile.name}</h2>
+                <p className="mt-1 text-sm text-white/62">{profile.bio}</p>
               </div>
             </div>
-            <button onClick={() => setEditingProfile(v => !v)} style={{borderRadius:16, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.05)', padding:'8px 16px', fontSize:12, color:'rgba(255,255,255,0.85)', cursor:'pointer', flexShrink:0, marginBottom:4}}>
-              {editingProfile ? "Close" : "Edit"}
+            <button onClick={() => setEditOpen((value) => !value)} className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-xs text-white/85">
+              {editOpen ? "Close" : "Edit"}
             </button>
           </div>
-          <div style={{marginTop:16, borderRadius:22, background:'rgba(255,255,255,0.04)', padding:12, fontSize:13, color:'rgba(255,255,255,0.75)'}}>{profile.mood}</div>
+          <div className="mt-4 rounded-[22px] bg-white/[0.04] p-3 text-sm text-white/75">{profile.mood}</div>
         </div>
+      </section>
+
+      <div className="grid grid-cols-3 gap-3">
+        <StatCard value={String(joinedCount)} label="Joined" />
+        <StatCard value="34" label="Friends" />
+        <StatCard value={String(unread)} label="Unread" />
       </div>
 
-      {editingProfile && (
-        <div style={{borderRadius:28, border:'1px solid rgba(167,139,250,0.2)', background:'rgba(255,255,255,0.05)', padding:16}}>
-          <p style={{fontSize:15, fontWeight:600, color:'#fff', marginBottom:16}}>Edit profile</p>
-          {[['Name', 'name'],['Bio','bio'],['Mood','mood']].map(([label, key]) => (
-            <div key={key} style={{marginBottom:12}}>
-              <p style={{fontSize:11, textTransform:'uppercase', letterSpacing:'0.2em', color:'rgba(255,255,255,0.45)', marginBottom:8}}>{label}</p>
-              <input value={draftProfile[key]} onChange={e => setDraftProfile({...draftProfile, [key]:e.target.value})}
-                style={{width:'100%', borderRadius:16, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.05)', padding:'12px 16px', fontSize:13, color:'#fff', outline:'none', fontFamily:"'DM Sans', sans-serif", boxSizing:'border-box'}}/>
-            </div>
-          ))}
-          <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginTop:4}}>
-            <button onClick={saveProfile} style={{borderRadius:16, background:'#fff', padding:'12px 0', fontSize:13, fontWeight:600, color:'#0A0A0F', border:'none', cursor:'pointer'}}>Save</button>
-            <button onClick={() => { setDraftProfile(profile); setEditingProfile(false); }} style={{borderRadius:16, border:'1px solid rgba(255,255,255,0.1)', background:'rgba(255,255,255,0.05)', padding:'12px 0', fontSize:13, color:'rgba(255,255,255,0.85)', cursor:'pointer'}}>Cancel</button>
-          </div>
-        </div>
-      )}
-
-      <div style={{display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12}}>
-        {[[String(joinedCount),'Joined'],[' 34','Friends'],[String(unreadCount),'Unread']].map(([n,l]) => (
-          <div key={l} style={{borderRadius:22, border:'1px solid rgba(255,255,255,0.08)', background:'rgba(255,255,255,0.05)', padding:12, textAlign:'center'}}>
-            <p style={{fontSize:22, fontWeight:600, color:'#fff'}}>{n}</p>
-            <p style={{marginTop:4, fontSize:11, color:'rgba(255,255,255,0.55)'}}>{l}</p>
-          </div>
-        ))}
-      </div>
-
-      <div style={{borderRadius:28, border:'1px solid rgba(255,255,255,0.08)', background:'rgba(255,255,255,0.05)', padding:16}}>
-        <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16}}>
-          <p style={{fontSize:15, fontWeight:600, color:'#fff'}}>Notifications</p>
-          <button onClick={markAllRead} style={{fontSize:12, color:'#a78bfa', background:'none', border:'none', cursor:'pointer'}}>Mark all read</button>
-        </div>
-        {notifications.map(n => (
-          <div key={n.id} style={{borderRadius:24, padding:12, marginBottom:8, background: n.read ? 'rgba(255,255,255,0.03)' : 'rgba(167,139,250,0.1)', border: n.read ? 'none' : '1px solid rgba(167,139,250,0.15)'}}>
-            <div style={{display:'flex', gap:12}}>
-              <div style={{width:44, height:44, borderRadius:16, background:'rgba(255,255,255,0.1)', display:'flex', alignItems:'center', justifyContent:'center', fontSize:18, flexShrink:0}}>{n.icon}</div>
-              <div style={{flex:1, minWidth:0}}>
-                <div style={{display:'flex', alignItems:'center', justifyContent:'space-between', gap:8}}>
-                  <p style={{fontSize:11, textTransform:'uppercase', letterSpacing:'0.22em', color:'rgba(167,139,250,0.7)'}}>{n.type}</p>
-                  <p style={{fontSize:11, color:'rgba(255,255,255,0.4)', flexShrink:0}}>{n.time}</p>
-                </div>
-                <p style={{marginTop:4, fontSize:13, color:'rgba(255,255,255,0.88)', lineHeight:1.5}}>{n.text}</p>
-                <div style={{marginTop:10, display:'flex', gap:8}}>
-                  <button style={{borderRadius:16, border:'1px solid rgba(255,255,255,0.1)', padding:'6px 12px', fontSize:11, color:'rgba(255,255,255,0.85)', background:'none', cursor:'pointer'}}>{n.cta}</button>
-                  {!n.read && <button onClick={() => markNotificationRead(n.id)} style={{borderRadius:16, border:'1px solid rgba(167,139,250,0.2)', padding:'6px 12px', fontSize:11, color:'#c4b5fd', background:'none', cursor:'pointer'}}>Mark read</button>}
+      <AnimatePresence>
+        {editOpen && (
+          <motion.section
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden rounded-[28px] border border-violet-400/20 bg-white/5"
+          >
+            <div className="p-4">
+              <SectionHeader title="Edit profile" icon={Settings} />
+              <div className="mt-4 space-y-3">
+                <Input label="Name" value={draft.name} onChange={(value) => setDraft({ ...draft, name: value })} />
+                <Input label="Bio" value={draft.bio} onChange={(value) => setDraft({ ...draft, bio: value })} />
+                <Input label="Mood" value={draft.mood} onChange={(value) => setDraft({ ...draft, mood: value })} />
+                <div className="grid grid-cols-2 gap-3">
+                  <button onClick={saveProfile} className="rounded-2xl bg-white py-3 text-sm font-semibold text-[#0B0C11]">Save</button>
+                  <button onClick={() => setEditOpen(false)} className="rounded-2xl border border-white/10 bg-white/5 py-3 text-sm text-white/85">Cancel</button>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          </motion.section>
+        )}
+      </AnimatePresence>
+
+      <section className="rounded-[28px] border border-white/8 bg-white/5 p-4">
+        <div className="flex items-center justify-between gap-3">
+          <SectionHeader title="Notifications" icon={Bell} />
+          <button onClick={markAllRead} className="text-sm text-violet-300">Mark all read</button>
+        </div>
+        <div className="mt-4 space-y-3">
+          {notifications.map((notification) => {
+            const Icon = notification.icon;
+            return (
+              <div key={notification.id} className={`rounded-[24px] p-3 ${notification.read ? "bg-white/[0.04]" : "border border-violet-300/15 bg-violet-400/10"}`}>
+                <div className="flex gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-white/85">
+                    <Icon size={18} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[11px] uppercase tracking-[0.22em] text-violet-300/75">{notification.type}</p>
+                      <p className="text-[11px] text-white/40">{notification.time}</p>
+                    </div>
+                    <p className="mt-1 text-sm leading-5 text-white/88">{notification.text}</p>
+                    {!notification.read && (
+                      <button onClick={() => markRead(notification.id)} className="mt-3 rounded-2xl border border-violet-300/20 px-3 py-2 text-xs text-violet-200">
+                        Mark read
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
     </div>
+  );
+}
+
+function SearchInput() {
+  return (
+    <div className="flex items-center gap-3 rounded-2xl border border-white/8 bg-white/5 px-4 py-3 text-sm text-white/50">
+      <Search size={16} />
+      <span>Search events, clubs, restaurants...</span>
+    </div>
+  );
+}
+
+function SectionHeader({ title, action, icon: Icon }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2">
+        {Icon ? <Icon size={16} className="text-violet-300" /> : null}
+        <h3 className="text-base font-semibold">{title}</h3>
+      </div>
+      {action ? <span className="text-sm text-violet-300">{action}</span> : null}
+    </div>
+  );
+}
+
+function StatCard({ value, label }) {
+  return (
+    <div className="rounded-[22px] border border-white/8 bg-white/5 p-3 text-center">
+      <p className="text-base font-semibold">{value}</p>
+      <p className="mt-1 text-[11px] text-white/55">{label}</p>
+    </div>
+  );
+}
+
+function Input({ label, value, onChange }) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-[11px] uppercase tracking-[0.22em] text-white/45">{label}</span>
+      <input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none placeholder:text-white/30"
+      />
+    </label>
   );
 }
