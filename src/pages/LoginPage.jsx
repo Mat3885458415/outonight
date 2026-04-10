@@ -14,8 +14,12 @@ export default function LoginPage({ onLogin }) {
     await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } })
   }
 
+  const handleGoogle = async () => {
+    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: 'https://outonight.vercel.app' } })
+  }
+
   const handleApple = async () => {
-    await supabase.auth.signInWithOAuth({ provider: 'apple', options: { redirectTo: window.location.origin } })
+    await supabase.auth.signInWithOAuth({ provider: 'apple', options: { redirectTo: 'https://outonight.vercel.app' } })
   }
 
   const handleEmail = async () => {
