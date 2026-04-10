@@ -1,0 +1,68 @@
+.bar {
+  display: flex;
+  background: var(--black);
+  border-top: none;
+  position: sticky;
+  bottom: 0;
+  z-index: 100;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.tab {
+  flex: 1;
+  padding: 12px 4px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: #555;
+  transition: color 0.15s;
+  position: relative;
+}
+
+.tab:hover {
+  color: #888;
+}
+
+.active {
+  color: var(--white) !important;
+}
+
+.active .iconWrap {
+  background: #333;
+  border-radius: var(--radius-md);
+}
+
+.iconWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
+  position: relative;
+  transition: background 0.15s;
+}
+
+.label {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+}
+
+.badge {
+  position: absolute;
+  top: 2px;
+  right: 6px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: #e53935;
+  color: var(--white);
+  font-size: 9px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
