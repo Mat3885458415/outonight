@@ -65,6 +65,9 @@ export default function OutonightApp() {
   const [joined, setJoined]           = useState([]);
   const [myPlans, setMyPlans]         = useState([]); // [{ bar_id, plan_date }]
   const [barPlans, setBarPlans]       = useState({}); // { "date": { barId: count } }
+  const [restaurants, setRestaurants] = useState([]);
+  const [myRestoPlans, setMyRestoPlans] = useState([]); // [{ restaurant_id, plan_date }]
+  const [restoPlans, setRestoPlans]   = useState({}); // { "date": { restoId: count } }
   const [notifications, setNotifications] = useState(NOTIFICATIONS_DATA);
   const [editOpen, setEditOpen]       = useState(false);
   const [toast, setToast]             = useState(null);
@@ -101,11 +104,13 @@ export default function OutonightApp() {
   // ── Fetch bars + events from Supabase ────────────────────────────────────
   useEffect(() => {
     async function fetchData() {
-      const [{ data: barsData }, { data: eventsData }, { data: rsvpData }, { data: plansData }] = await Promise.all([
+      const [{ data: barsData }, { data: eventsData }, { data: rsvpData }, { data: plansData }, { data: restosData }, { data: restoPlansData }] = await Promise.all([
         supabase.from("bars").select("*").order("name"),
         supabase.from("events").select("*").order("date", { ascending: true }),
         supabase.from("rsvp").select("event_id, user_id"),
         supabase.from("bar_plans").select("bar_id, user_id, plan_date"),
+        supabase.from("restaurants").select("*").order("name"),
+        supabase.from("resto_plans").select("restaurant_id, user_id, plan_date"),
       ]);
 
       const cu = (await supabase.auth.getUser()).data.user;
@@ -124,6 +129,18 @@ export default function OutonightApp() {
         });
         setBarPlans(map);
         if (cu) setMyPlans(plansData.filter(p => p.user_id === cu.id).map(p => ({ bar_id: p.bar_id, plan_date: p.plan_date })));
+      }
+
+      if (restosData) setRestaurants(restosData);
+
+      if (restoPlansData) {
+        const map = {};
+        restoPlansData.forEach(p => {
+          if (!map[p.plan_date]) map[p.plan_date] = {};
+          map[p.plan_date][p.restaurant_id] = (map[p.plan_date][p.restaurant_id] || 0) + 1;
+        });
+        setRestoPlans(map);
+        if (cu) setMyRestoPlans(restoPlansData.filter(p => p.user_id === cu.id).map(p => ({ restaurant_id: p.restaurant_id, plan_date: p.plan_date })));
       }
 
       const barsMap = {};
@@ -185,6 +202,27 @@ export default function OutonightApp() {
       await supabase.from("rsvp").delete().eq("event_id", id).eq("user_id", user.id);
     } else {
       await supabase.from("rsvp").insert({ event_id: id, user_id: user.id });
+    }
+  };
+
+  const toggleRestoPlan = async (restoId, date) => {
+    if (!user) return;
+    const has = myRestoPlans.some(p => p.restaurant_id === restoId && p.plan_date === date);
+    const resto = restaurants.find(r => r.id === restoId);
+    setMyRestoPlans(cur => has
+      ? cur.filter(p => !(p.restaurant_id === restoId && p.plan_date === date))
+      : [...cur, { restaurant_id: restoId, plan_date: date }]
+    );
+    setRestoPlans(cur => {
+      const day = { ...(cur[date] || {}) };
+      day[restoId] = Math.max(0, (day[restoId] || 0) + (has ? -1 : 1));
+      return { ...cur, [date]: day };
+    });
+    showToast(has ? `Removed from plans` : `Added ${resto?.name} to your plans! 🍽️`);
+    if (has) {
+      await supabase.from("resto_plans").delete().eq("user_id", user.id).eq("restaurant_id", restoId).eq("plan_date", date);
+    } else {
+      await supabase.from("resto_plans").insert({ user_id: user.id, restaurant_id: restoId, plan_date: date });
     }
   };
 
@@ -264,7 +302,7 @@ export default function OutonightApp() {
                 <HomeScreen
                   events={events}
                   bars={bars}
-                  unboundEvents={unboundEvents}
+                  restaurants={restaurants}
                   joined={joined}
                   openEvent={openEvent}
                   toggleJoin={toggleJoin}
@@ -272,6 +310,9 @@ export default function OutonightApp() {
                   myPlans={myPlans}
                   barPlans={barPlans}
                   toggleBarPlan={toggleBarPlan}
+                  myRestoPlans={myRestoPlans}
+                  restoPlans={restoPlans}
+                  toggleRestoPlan={toggleRestoPlan}
                 />
               )}
               {route.tab === "explore" && (
@@ -401,15 +442,10 @@ function buildWeekDays() {
 
 const WEEK_DAYS = buildWeekDays();
 
-function HomeScreen({ events, bars, unboundEvents, joined, openEvent, toggleJoin, navigate, myPlans, barPlans, toggleBarPlan }) {
-  const [planDay, setPlanDay] = useState(WEEK_DAYS[0].iso);
-
+function HomeScreen({ events, bars, restaurants, joined, openEvent, toggleJoin, navigate, myPlans, barPlans, toggleBarPlan, myRestoPlans, restoPlans, toggleRestoPlan }) {
   const specialEvents = events.filter(e => e.is_special);
   const regularEvents = events.filter(e => !e.is_special);
   const hero = regularEvents[0] ?? null;
-
-  const dayPlans = barPlans[planDay] || {};
-  const sortedBars = [...bars].sort((a, b) => (dayPlans[b.id] || 0) - (dayPlans[a.id] || 0));
 
   return (
     <div className="space-y-6">
@@ -504,88 +540,198 @@ function HomeScreen({ events, bars, unboundEvents, joined, openEvent, toggleJoin
         </section>
       )}
 
-      {/* ── Who's going out this week? ── */}
-      <section>
-        <SectionHeader title="Who's going out?" />
-        {/* Day picker */}
-        <div className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1" style={{ scrollbarWidth: "none" }}>
-          {WEEK_DAYS.map(day => {
-            const total = Object.values(barPlans[day.iso] || {}).reduce((s, n) => s + n, 0);
-            const active = planDay === day.iso;
-            return (
-              <button
-                key={day.iso}
-                onClick={() => setPlanDay(day.iso)}
-                className={`flex shrink-0 flex-col items-center rounded-[18px] px-3.5 py-2.5 transition ${active ? "bg-violet-500 text-white" : "border border-white/8 bg-white/5 text-white/60 hover:bg-white/10"}`}
-              >
-                <span className="text-[11px] font-medium">{day.label}</span>
-                <span className={`text-base font-bold leading-tight ${active ? "text-white" : "text-white/80"}`}>{day.num}</span>
-                {total > 0 && (
-                  <span className={`mt-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${active ? "bg-white/25 text-white" : "bg-violet-400/20 text-violet-300"}`}>{total}</span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Bars for selected day */}
-        <div className="mt-3 space-y-2">
-          {sortedBars.map(bar => {
-            const count = dayPlans[bar.id] || 0;
-            const isMe  = myPlans.some(p => p.bar_id === bar.id && p.plan_date === planDay);
-            return (
-              <div key={bar.id} className={`flex items-center gap-3 rounded-[22px] border p-3 transition ${isMe ? "border-violet-400/30 bg-violet-400/8" : "border-white/8 bg-white/5"}`}>
-                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-gradient-to-br ${bar.gradient || "from-violet-500/20 to-indigo-500/20"} text-xl`}>{bar.emoji}</div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold">{bar.name}</p>
-                  <p className="mt-0.5 text-xs text-white/45">
-                    {count > 0 ? `${count} going` : "Be the first!"}
-                  </p>
-                </div>
-                <button
-                  onClick={() => toggleBarPlan(bar.id, planDay)}
-                  className={`shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold transition active:scale-[0.96] ${isMe ? "bg-violet-500 text-white" : "bg-white text-[#0B0C11]"}`}
-                >
-                  {isMe ? "✓ I'm in" : "I'm in"}
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* ── Bars strip ── */}
+      {/* ── Bars — collapsible ── */}
       {bars.length > 0 && (
         <section>
           <SectionHeader title="Bars" action="See all" onAction={() => navigate("explore")} />
-          <div className="-mx-1 mt-3 flex gap-3 overflow-x-auto px-1 pb-2" style={{ scrollbarWidth: "none" }}>
-            {bars.map((bar, i) => (
-              <motion.a
-                key={bar.id}
-                href={`https://maps.google.com/?q=${encodeURIComponent(bar.address || bar.name + ' Zlín')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                initial={{ opacity: 0, x: 12 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.06 }}
-                className="w-40 shrink-0 overflow-hidden rounded-[22px] border border-white/8 bg-white/5 block"
-              >
-                <div className={`flex h-20 items-center justify-center bg-gradient-to-br ${bar.gradient || "from-violet-500/20 to-indigo-500/20"} text-4xl`}>{bar.emoji}</div>
-                <div className="p-3">
-                  <p className="truncate text-sm font-semibold">{bar.name}</p>
-                  <p className="mt-0.5 text-xs text-white/45">{bar.tag}</p>
-                  <div className="mt-2 flex items-center justify-between gap-1">
-                    <span className="truncate text-[10px] text-white/35">{bar.address ? bar.address.split(',')[0] : bar.distance}</span>
-                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] ${bar.open ? "bg-emerald-500/15 text-emerald-400" : "bg-white/8 text-white/35"}`}>
-                      {bar.open ? "Open" : "Closed"}
-                    </span>
-                  </div>
-                </div>
-              </motion.a>
+          <div className="mt-3 space-y-2">
+            {bars.map(bar => (
+              <CollapsibleBarCard key={bar.id} bar={bar} barPlans={barPlans} myPlans={myPlans} toggleBarPlan={toggleBarPlan} />
             ))}
           </div>
         </section>
       )}
+
+      {/* ── Restaurants — collapsible ── */}
+      {restaurants.length > 0 && (
+        <section>
+          <SectionHeader title="Restaurants" />
+          <div className="mt-3 space-y-2">
+            {restaurants.map(resto => (
+              <CollapsibleRestoCard key={resto.id} resto={resto} restoPlans={restoPlans} myRestoPlans={myRestoPlans} toggleRestoPlan={toggleRestoPlan} />
+            ))}
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+// ─── CollapsibleBarCard ───────────────────────────────────────────────────────
+
+function CollapsibleBarCard({ bar, barPlans, myPlans, toggleBarPlan }) {
+  const [open, setOpen] = useState(false);
+  const [planDay, setPlanDay] = useState(WEEK_DAYS[0].iso);
+
+  const totalWeek = WEEK_DAYS.reduce((s, d) => s + (barPlans[d.iso]?.[bar.id] || 0), 0);
+  const dayCount  = barPlans[planDay]?.[bar.id] || 0;
+  const isMe      = myPlans.some(p => p.bar_id === bar.id && p.plan_date === planDay);
+
+  return (
+    <div className={`overflow-hidden rounded-[22px] border transition ${open ? "border-violet-400/25 bg-white/[0.06]" : "border-white/8 bg-white/5"}`}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="flex w-full items-center gap-3 p-3 text-left"
+      >
+        <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-gradient-to-br ${bar.gradient || "from-violet-500/20 to-indigo-500/20"} text-xl`}>
+          {bar.emoji}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">{bar.name}</p>
+          <p className="mt-0.5 text-xs text-white/45">
+            {totalWeek > 0 ? `${totalWeek} going this week` : "Be the first to plan!"}
+          </p>
+        </div>
+        <motion.span animate={{ rotate: open ? 90 : 0 }} transition={{ duration: 0.18 }} className="shrink-0 text-white/30">
+          <ChevronRight size={16} />
+        </motion.span>
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-white/8 px-3 pb-3 pt-3">
+              {/* Day picker */}
+              <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+                {WEEK_DAYS.map(day => {
+                  const cnt    = barPlans[day.iso]?.[bar.id] || 0;
+                  const active = planDay === day.iso;
+                  return (
+                    <button
+                      key={day.iso}
+                      onClick={() => setPlanDay(day.iso)}
+                      className={`flex shrink-0 flex-col items-center rounded-[14px] px-3 py-2 transition ${active ? "bg-violet-500 text-white" : "border border-white/8 bg-white/[0.04] text-white/55"}`}
+                    >
+                      <span className="text-[10px] font-medium">{day.label}</span>
+                      <span className="text-sm font-bold leading-tight">{day.num}</span>
+                      {cnt > 0 && (
+                        <span className={`mt-0.5 rounded-full px-1 text-[9px] font-semibold ${active ? "bg-white/25" : "bg-violet-400/20 text-violet-300"}`}>{cnt}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Status + button */}
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <p className="text-xs text-white/50">
+                  {dayCount > 0 ? `${dayCount} people going` : "No one yet"}
+                  {bar.address && (
+                    <a href={`https://maps.google.com/?q=${encodeURIComponent(bar.address)}`} target="_blank" rel="noopener noreferrer" className="ml-2 text-violet-300/70">· {bar.address.split(',')[0]}</a>
+                  )}
+                </p>
+                <button
+                  onClick={() => toggleBarPlan(bar.id, planDay)}
+                  className={`shrink-0 rounded-xl px-4 py-2 text-xs font-semibold transition active:scale-[0.96] ${isMe ? "bg-violet-500 text-white" : "bg-white text-[#0B0C11]"}`}
+                >
+                  {isMe ? "✓ I'm in" : "I'm in"}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ─── CollapsibleRestoCard ─────────────────────────────────────────────────────
+
+function CollapsibleRestoCard({ resto, restoPlans, myRestoPlans, toggleRestoPlan }) {
+  const [open, setOpen] = useState(false);
+  const [planDay, setPlanDay] = useState(WEEK_DAYS[0].iso);
+
+  const totalWeek = WEEK_DAYS.reduce((s, d) => s + (restoPlans[d.iso]?.[resto.id] || 0), 0);
+  const dayCount  = restoPlans[planDay]?.[resto.id] || 0;
+  const isMe      = myRestoPlans.some(p => p.restaurant_id === resto.id && p.plan_date === planDay);
+
+  return (
+    <div className={`overflow-hidden rounded-[22px] border transition ${open ? "border-amber-400/20 bg-white/[0.06]" : "border-white/8 bg-white/5"}`}>
+      <button
+        onClick={() => setOpen(v => !v)}
+        className="flex w-full items-center gap-3 p-3 text-left"
+      >
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-amber-400/15 text-xl">
+          {resto.emoji}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold">{resto.name}</p>
+          <p className="mt-0.5 text-xs text-white/45">
+            {resto.cuisine}{totalWeek > 0 ? ` · ${totalWeek} going this week` : ""}
+          </p>
+        </div>
+        <motion.span animate={{ rotate: open ? 90 : 0 }} transition={{ duration: 0.18 }} className="shrink-0 text-white/30">
+          <ChevronRight size={16} />
+        </motion.span>
+      </button>
+
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-white/8 px-3 pb-3 pt-3">
+              {resto.description && <p className="mb-3 text-xs text-white/55 leading-5">{resto.description}</p>}
+              {/* Day picker */}
+              <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+                {WEEK_DAYS.map(day => {
+                  const cnt    = restoPlans[day.iso]?.[resto.id] || 0;
+                  const active = planDay === day.iso;
+                  return (
+                    <button
+                      key={day.iso}
+                      onClick={() => setPlanDay(day.iso)}
+                      className={`flex shrink-0 flex-col items-center rounded-[14px] px-3 py-2 transition ${active ? "bg-amber-500 text-white" : "border border-white/8 bg-white/[0.04] text-white/55"}`}
+                    >
+                      <span className="text-[10px] font-medium">{day.label}</span>
+                      <span className="text-sm font-bold leading-tight">{day.num}</span>
+                      {cnt > 0 && (
+                        <span className={`mt-0.5 rounded-full px-1 text-[9px] font-semibold ${active ? "bg-white/25" : "bg-amber-400/20 text-amber-300"}`}>{cnt}</span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Status + button */}
+              <div className="mt-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-xs text-white/50">
+                    {dayCount > 0 ? `${dayCount} people going` : "No one yet"}
+                  </p>
+                  {resto.hours && <p className="mt-0.5 text-[11px] text-white/35">🕐 {resto.hours}</p>}
+                </div>
+                <button
+                  onClick={() => toggleRestoPlan(resto.id, planDay)}
+                  className={`shrink-0 rounded-xl px-4 py-2 text-xs font-semibold transition active:scale-[0.96] ${isMe ? "bg-amber-500 text-white" : "bg-white text-[#0B0C11]"}`}
+                >
+                  {isMe ? "✓ I'm going" : "I'm going"}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
