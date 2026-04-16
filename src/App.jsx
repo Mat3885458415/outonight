@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Bell, Compass, Home, MapPin, Navigation, Search, Settings, Share2, Sparkles, Star, User, X, ChevronRight } from "lucide-react";
+import { Compass, Home, MapPin, Navigation, Search, Settings, Share2, User, X, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./lib/supabase";
 import AdminPage from "./pages/AdminPage";
@@ -285,7 +285,7 @@ export default function OutonightApp() {
 
         {/* Top bar */}
         <div className="sticky top-0 z-30 border-b border-white/6 bg-[#0B0C11]/80 px-4 pb-3 pt-[max(env(safe-area-inset-top),16px)] backdrop-blur-xl">
-          <TopBar route={route} onBack={() => navigate("explore")} onBellClick={() => navigate("profile")} unreadCount={unreadCount} />
+          <TopBar route={route} onBack={() => navigate("explore")} />
         </div>
 
         {/* Content */}
@@ -397,7 +397,7 @@ export default function OutonightApp() {
 
 // ─── TopBar ───────────────────────────────────────────────────────────────────
 
-function TopBar({ route, onBack, onBellClick, unreadCount }) {
+function TopBar({ route, onBack }) {
   const titles = { home: "Tonight in Zlín", explore: "Bars & Events", event: "Event details", map: "Map", profile: "Profile" };
   return (
     <div className="flex items-center justify-between gap-3">
@@ -412,14 +412,11 @@ function TopBar({ route, onBack, onBellClick, unreadCount }) {
           <h1 className="text-base font-semibold">{titles[route.tab]}</h1>
         </div>
       </div>
-      <button onClick={onBellClick} className="relative flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/5 text-white/80">
-        <Bell size={18} />
-        {unreadCount > 0 && (
-          <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-violet-500 text-[9px] font-bold text-white">
-            {unreadCount}
-          </span>
-        )}
-      </button>
+      {route.tab === "home" && (
+        <p className="text-right text-[11px] leading-tight text-white/40">
+          New encounters<br />& parties tonight ✨
+        </p>
+      )}
     </div>
   );
 }
