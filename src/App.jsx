@@ -166,7 +166,7 @@ export default function OutonightApp() {
     const ev  = events.find((e) => e.id === id);
     setJoined(cur => has ? cur.filter(x => x !== id) : [...cur, id]);
     setEvents(cur => cur.map(e => e.id === id ? { ...e, goingCount: Math.max(0, e.goingCount + (has ? -1 : 1)) } : e));
-    showToast(has ? `Tu as quitté ${ev?.title}` : `Tu rejoins ${ev?.title} ! 🎉`);
+    showToast(has ? `You left ${ev?.title}` : `You're going to ${ev?.title}! 🎉`);
     if (has) {
       await supabase.from("rsvp").delete().eq("event_id", id).eq("user_id", user.id);
     } else {
@@ -176,7 +176,7 @@ export default function OutonightApp() {
 
   const markRead    = (id) => setNotifications((cur) => cur.map((n) => n.id === id ? { ...n, read: true } : n));
   const markAllRead = ()   => setNotifications((cur) => cur.map((n) => ({ ...n, read: true })));
-  const saveProfile = ()   => { setProfile(draft); setEditOpen(false); showToast("Profil sauvegardé ✓"); };
+  const saveProfile = ()   => { setProfile(draft); setEditOpen(false); showToast("Profile saved ✓"); };
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -396,7 +396,7 @@ function HomeScreen({ events, bars, unboundEvents, joined, openEvent, toggleJoin
       {/* Tonight's events */}
       {events.length > 1 && (
         <section>
-          <SectionHeader title="Tonight" action="Voir tout" onAction={() => navigate("explore")} />
+          <SectionHeader title="Tonight" action="See all" onAction={() => navigate("explore")} />
           <div className="mt-3 space-y-2">
             {events.slice(1, 5).map((event, i) => (
               <motion.button
@@ -426,7 +426,7 @@ function HomeScreen({ events, bars, unboundEvents, joined, openEvent, toggleJoin
       {/* Bars */}
       {bars.length > 0 && (
         <section>
-          <SectionHeader title="Les bars" action="Voir tout" onAction={() => navigate("explore")} />
+          <SectionHeader title="Bars" action="See all" onAction={() => navigate("explore")} />
           <div className="-mx-1 mt-3 flex gap-3 overflow-x-auto px-1 pb-2" style={{ scrollbarWidth: "none" }}>
             {bars.map((bar, i) => (
               <motion.div
@@ -492,7 +492,7 @@ function ExploreScreen({ barsWithEvents, unboundEvents, joined, onToggleJoin, on
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Chercher un bar ou un event..."
+          placeholder="Search a bar or event..."
           className="flex-1 bg-transparent text-sm text-white outline-none placeholder:text-white/40"
         />
         {search && (
@@ -501,7 +501,7 @@ function ExploreScreen({ barsWithEvents, unboundEvents, joined, onToggleJoin, on
       </div>
 
       {!hasResults ? (
-        <EmptyState message="Aucun résultat" />
+        <EmptyState message="No results" />
       ) : (
         <>
           {/* Bar cards */}
@@ -682,23 +682,13 @@ function BarCard({ bar, joined, onToggleJoin, onOpenEvent, isExpanded, onToggleE
 function EventScreen({ event, isJoined, onJoin, user }) {
   const [attendees, setAttendees] = useState([]);
   const [selectedProfile, setSelectedProfile] = useState(null);
-  const [showShare, setShowShare] = useState(false);
 
   useEffect(() => {
-    async function load() {
-      const { data: rows } = await supabase
-        .from("rsvp")
-        .select("user_id")
-        .eq("event_id", event.id);
-      if (!rows || rows.length === 0) { setAttendees([]); return; }
-      const ids = rows.map(r => r.user_id);
-      const { data: profs } = await supabase
-        .from("profiles")
-        .select("id, full_name, university, interests")
-        .in("id", ids);
-      if (profs) setAttendees(profs.map(p => ({ user_id: p.id, profiles: p })));
-    }
-    load();
+    supabase
+      .from("rsvp")
+      .select("user_id, profiles(full_name, university, interests)")
+      .eq("event_id", event.id)
+      .then(({ data }) => { if (data) setAttendees(data); });
   }, [event.id, isJoined]);
 
   const totalGoing = attendees.length || event.goingCount;
@@ -727,30 +717,21 @@ function EventScreen({ event, isJoined, onJoin, user }) {
       </div>
 
       <section className="rounded-[28px] border border-white/8 bg-white/5 p-4">
-        <SectionHeader title="À propos" />
+        <SectionHeader title="About" />
         <p className="mt-3 text-sm leading-6 text-white/70">{event.description || "No description."}</p>
         <div className="mt-4">
           <button onClick={onJoin} className={`w-full rounded-2xl py-3 text-sm font-semibold transition active:scale-[0.98] ${isJoined ? "bg-violet-500 text-white" : "bg-white text-[#0B0C11]"}`}>
-            {isJoined ? "✓ Tu y vas" : "Rejoindre l'event"}
+            {isJoined ? "✓ You're going" : "Join this event"}
           </button>
         </div>
-        <button onClick={() => {
-          const txt = `🎉 ${event.title} — ${event.date} à ${event.barName}
-Rejoins moi sur OUTONIGHT !
-https://outonight.vercel.app`;
-          if (navigator.share) {
-            navigator.share({ title: event.title, text: txt, url: "https://outonight.vercel.app" }).catch(() => {});
-          } else {
-            setShowShare(true);
-          }
-        }} className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] py-3 text-sm text-white/65 transition active:scale-[0.98]">
+        <button className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] py-3 text-sm text-white/65 transition active:scale-[0.98]">
           <Share2 size={14} />
-          Partager avec des amis
+          Share with friends
         </button>
       </section>
 
       <section className="rounded-[28px] border border-white/8 bg-white/5 p-4">
-        <SectionHeader title="Qui y va" />
+        <SectionHeader title="Who's going" />
         {attendees.length === 0 ? (
           <p className="mt-3 text-sm text-white/40">Be the first to join!</p>
         ) : (
@@ -765,7 +746,7 @@ https://outonight.vercel.app`;
                     {name[0].toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white/80">{name}{isMe ? " (toi)" : ""}</p>
+                    <p className="text-sm text-white/80">{name}{isMe ? " (you)" : ""}</p>
                     {a.profiles?.university && <p className="text-xs text-white/40 truncate">{a.profiles.university}</p>}
                   </div>
                   <ChevronRight size={14} className="shrink-0 text-white/25" />
@@ -775,65 +756,6 @@ https://outonight.vercel.app`;
           </div>
         )}
       </section>
-
-      {showShare && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowShare(false)}>
-          <motion.div
-            initial={{ y: 80, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            className="w-full max-w-md rounded-t-[32px] border border-white/10 bg-[#0F1018] p-6 pb-10"
-            onClick={e => e.stopPropagation()}
-          >
-            <div className="mb-5 flex items-center justify-between">
-              <span className="text-base font-semibold">Partager</span>
-              <button onClick={() => setShowShare(false)} className="text-white/40 hover:text-white/70"><X size={18} /></button>
-            </div>
-            <div className="space-y-3">
-              <a
-                href={`https://wa.me/?text=${encodeURIComponent(`🎉 ${event.title} — ${event.date} à ${event.barName}
-Rejoins moi sur OUTONIGHT !
-https://outonight.vercel.app`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-4 rounded-2xl border border-white/8 bg-[#25D366]/15 px-4 py-4 transition hover:bg-[#25D366]/25"
-              >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#25D366] text-white text-xl">💬</div>
-                <div>
-                  <p className="text-sm font-semibold text-white">WhatsApp</p>
-                  <p className="text-xs text-white/45">Partager via WhatsApp</p>
-                </div>
-              </a>
-              <button
-                onClick={() => {
-                  const txt = `🎉 ${event.title} — ${event.date} à ${event.barName}
-Rejoins moi sur OUTONIGHT !
-https://outonight.vercel.app`;
-                  navigator.clipboard.writeText(txt).then(() => setShowShare(false));
-                }}
-                className="flex w-full items-center gap-4 rounded-2xl border border-white/8 bg-[#E1306C]/15 px-4 py-4 transition hover:bg-[#E1306C]/25"
-              >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#E1306C] to-[#F77737] text-white text-xl">📸</div>
-                <div className="text-left">
-                  <p className="text-sm font-semibold text-white">Instagram</p>
-                  <p className="text-xs text-white/45">Copie le lien → colle dans ta story</p>
-                </div>
-              </button>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText("https://outonight.vercel.app").then(() => setShowShare(false));
-                }}
-                className="flex w-full items-center gap-4 rounded-2xl border border-white/8 bg-white/5 px-4 py-4 transition hover:bg-white/[0.08]"
-              >
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-white text-xl">🔗</div>
-                <div className="text-left">
-                  <p className="text-sm font-semibold text-white">Copier le lien</p>
-                  <p className="text-xs text-white/45">outonight.vercel.app</p>
-                </div>
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
 
       {selectedProfile && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={() => setSelectedProfile(null)}>
@@ -853,7 +775,7 @@ https://outonight.vercel.app`;
               </div>
               <div>
                 <h3 className="text-lg font-semibold">{selectedProfile.full_name || "Student"}</h3>
-                {selectedProfile.isMe && <span className="rounded-full bg-violet-400/15 px-2 py-0.5 text-[11px] text-violet-300">Vous</span>}
+                {selectedProfile.isMe && <span className="rounded-full bg-violet-400/15 px-2 py-0.5 text-[11px] text-violet-300">You</span>}
               </div>
             </div>
             {selectedProfile.university && (
@@ -1009,7 +931,7 @@ function ProfileScreen({ profile, draft, setDraft, editOpen, setEditOpen, savePr
       {/* Joined events */}
       {joinedEvents.length > 0 && (
         <section className="rounded-[28px] border border-white/8 bg-white/5 p-4">
-          <SectionHeader title="Tes events" />
+          <SectionHeader title="Your events" />
           <div className="mt-3 space-y-2">
             {joinedEvents.map((event) => (
               <div key={event.id} className="flex items-center gap-3 rounded-[18px] border border-white/6 bg-white/[0.04] p-3">

@@ -185,7 +185,7 @@ export default function AdminPage({ onBack }) {
                 {EMOJIS.map(em=><option key={em} value={em}>{em}</option>)}
               </select>
             </div>
-            <input className={styles.input} placeholder="Tags séparés par virgule (ex: Italian, Student deal)" value={resto.tags} onChange={e=>setResto({...resto,tags:e.target.value})} />
+            <input className={styles.input} placeholder="Tags separated by comma (ex: Italian, Student deal)" value={resto.tags} onChange={e=>setResto({...resto,tags:e.target.value})} />
             <div className={styles.colorRow}>
               {COLORS.map(c=>(
                 <div key={c} className={`${styles.colorDot} ${resto.color===c?styles.colorOn:''}`}
