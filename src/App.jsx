@@ -682,6 +682,7 @@ function BarCard({ bar, joined, onToggleJoin, onOpenEvent, isExpanded, onToggleE
 function EventScreen({ event, isJoined, onJoin, user }) {
   const [attendees, setAttendees] = useState([]);
   const [selectedProfile, setSelectedProfile] = useState(null);
+  const [showShare, setShowShare] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -733,7 +734,16 @@ function EventScreen({ event, isJoined, onJoin, user }) {
             {isJoined ? "✓ Tu y vas" : "Rejoindre l'event"}
           </button>
         </div>
-        <button className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] py-3 text-sm text-white/65 transition active:scale-[0.98]">
+        <button onClick={() => {
+          const txt = `🎉 ${event.title} — ${event.date} à ${event.barName}
+Rejoins moi sur OUTONIGHT !
+https://outonight.vercel.app`;
+          if (navigator.share) {
+            navigator.share({ title: event.title, text: txt, url: "https://outonight.vercel.app" }).catch(() => {});
+          } else {
+            setShowShare(true);
+          }
+        }} className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] py-3 text-sm text-white/65 transition active:scale-[0.98]">
           <Share2 size={14} />
           Partager avec des amis
         </button>
@@ -765,6 +775,65 @@ function EventScreen({ event, isJoined, onJoin, user }) {
           </div>
         )}
       </section>
+
+      {showShare && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowShare(false)}>
+          <motion.div
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="w-full max-w-md rounded-t-[32px] border border-white/10 bg-[#0F1018] p-6 pb-10"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="mb-5 flex items-center justify-between">
+              <span className="text-base font-semibold">Partager</span>
+              <button onClick={() => setShowShare(false)} className="text-white/40 hover:text-white/70"><X size={18} /></button>
+            </div>
+            <div className="space-y-3">
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(`🎉 ${event.title} — ${event.date} à ${event.barName}
+Rejoins moi sur OUTONIGHT !
+https://outonight.vercel.app`)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-4 rounded-2xl border border-white/8 bg-[#25D366]/15 px-4 py-4 transition hover:bg-[#25D366]/25"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#25D366] text-white text-xl">💬</div>
+                <div>
+                  <p className="text-sm font-semibold text-white">WhatsApp</p>
+                  <p className="text-xs text-white/45">Partager via WhatsApp</p>
+                </div>
+              </a>
+              <button
+                onClick={() => {
+                  const txt = `🎉 ${event.title} — ${event.date} à ${event.barName}
+Rejoins moi sur OUTONIGHT !
+https://outonight.vercel.app`;
+                  navigator.clipboard.writeText(txt).then(() => setShowShare(false));
+                }}
+                className="flex w-full items-center gap-4 rounded-2xl border border-white/8 bg-[#E1306C]/15 px-4 py-4 transition hover:bg-[#E1306C]/25"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#E1306C] to-[#F77737] text-white text-xl">📸</div>
+                <div className="text-left">
+                  <p className="text-sm font-semibold text-white">Instagram</p>
+                  <p className="text-xs text-white/45">Copie le lien → colle dans ta story</p>
+                </div>
+              </button>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText("https://outonight.vercel.app").then(() => setShowShare(false));
+                }}
+                className="flex w-full items-center gap-4 rounded-2xl border border-white/8 bg-white/5 px-4 py-4 transition hover:bg-white/[0.08]"
+              >
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-white text-xl">🔗</div>
+                <div className="text-left">
+                  <p className="text-sm font-semibold text-white">Copier le lien</p>
+                  <p className="text-xs text-white/45">outonight.vercel.app</p>
+                </div>
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       {selectedProfile && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={() => setSelectedProfile(null)}>
