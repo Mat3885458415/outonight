@@ -795,9 +795,6 @@ function MapScreen({ events, openEvent }) {
 // ─── ProfileScreen ────────────────────────────────────────────────────────────
 
 function ProfileScreen({ profile, draft, setDraft, editOpen, setEditOpen, saveProfile, notifications, markRead, markAllRead, joinedCount, joinedEvents, onAdmin, user, isAdmin, onLogout }) {
-  const [notifTab, setNotifTab] = useState("all");
-  const unread = notifications.filter((n) => !n.read);
-  const visibleNotifs = notifTab === "unread" ? unread : notifications;
 
   return (
     <div className="space-y-4">
@@ -824,10 +821,9 @@ function ProfileScreen({ profile, draft, setDraft, editOpen, setEditOpen, savePr
       </section>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-2.5">
+      <div className="grid grid-cols-2 gap-2.5">
         <StatCard value={String(joinedCount)} label="Joined" icon="🎟️" />
         <StatCard value="—" label="Friends" icon="👥" />
-        <StatCard value={String(unread.length)} label="Unread" icon="🔔" />
       </div>
 
       {/* Edit panel */}
@@ -874,48 +870,6 @@ function ProfileScreen({ profile, draft, setDraft, editOpen, setEditOpen, savePr
         </section>
       )}
 
-      {/* Notifications */}
-      <section className="rounded-[28px] border border-white/8 bg-white/5 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <SectionHeader title="Notifications" icon={Bell} />
-          {unread.length > 0 && <button onClick={markAllRead} className="text-xs text-violet-300">Tout lire</button>}
-        </div>
-        <div className="mt-3 flex gap-2">
-          {["all", "unread"].map((t) => (
-            <button key={t} onClick={() => setNotifTab(t)} className={`rounded-full px-3 py-1.5 text-xs capitalize transition ${notifTab === t ? "bg-white/10 text-white" : "text-white/40"}`}>
-              {t === "all" ? `Tout (${notifications.length})` : `Non lus (${unread.length})`}
-            </button>
-          ))}
-        </div>
-        <div className="mt-3 space-y-2.5">
-          {visibleNotifs.length === 0 ? (
-            <p className="py-4 text-center text-sm text-white/35">Aucune notification non lue</p>
-          ) : (
-            visibleNotifs.map((n) => {
-              const Icon = n.icon;
-              return (
-                <div key={n.id} className={`rounded-[22px] p-3 transition ${n.read ? "bg-white/[0.03]" : "border border-violet-300/15 bg-violet-400/10"}`}>
-                  <div className="flex gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/10 text-white/75"><Icon size={16} /></div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-[10px] uppercase tracking-[0.22em] text-violet-300/70">{n.type}</p>
-                        <p className="shrink-0 text-[10px] text-white/35">{n.time}</p>
-                      </div>
-                      <p className="mt-1 text-sm leading-5 text-white/85">{n.text}</p>
-                      {!n.read && (
-                        <button onClick={() => markRead(n.id)} className="mt-2 rounded-xl border border-violet-300/20 px-3 py-1.5 text-xs text-violet-300">
-                          Marquer comme lu
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </section>
     </div>
   );
 }
