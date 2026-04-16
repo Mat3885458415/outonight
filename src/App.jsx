@@ -3,6 +3,7 @@ import { Bell, Compass, Home, MapPin, Navigation, Search, Settings, Share2, Spar
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./lib/supabase";
 import AdminPage from "./pages/AdminPage";
+import LoginPage from "./pages/LoginPage";
 
 // ─── Gradient map by category ─────────────────────────────────────────────────
 
@@ -56,6 +57,9 @@ export default function OutonightApp() {
   const [bars, setBars]               = useState([]);
   const [events, setEvents]           = useState([]);
   const [dataLoading, setDataLoading] = useState(true);
+  const [user, setUser]               = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
+  const [isAdmin, setIsAdmin]         = useState(false);
 
   const [route, setRoute]             = useState({ tab: "home", eventId: null });
   const [joined, setJoined]           = useState(() => loadLS("ot_joined", []));
@@ -65,6 +69,32 @@ export default function OutonightApp() {
   const [profile, setProfile]         = useState({ name: "Matéo Dumont", bio: "TBU Zlín · Erasmus student", mood: "Looking for plans tonight" });
   const [draft, setDraft]             = useState(profile);
   const toastRef = useRef(null);
+
+  // ── Auth ─────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setAuthLoading(false);
+      if (session?.user) checkAdmin(session.user.id);
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) checkAdmin(session.user.id);
+      else setIsAdmin(false);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const checkAdmin = async (userId) => {
+    const { data } = await supabase.from("admins").select("id").eq("user_id", userId).single();
+    setIsAdmin(!!data);
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setIsAdmin(false);
+  };
 
   // ── Fetch bars + events from Supabase ────────────────────────────────────
   useEffect(() => {
@@ -138,6 +168,21 @@ export default function OutonightApp() {
   const saveProfile = ()   => { setProfile(draft); setEditOpen(false); showToast("Profil sauvegardé ✓"); };
 
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#07080C] text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-4xl mb-4">🌙</div>
+          <p className="text-white/60 text-sm">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginPage onLogin={(session) => setUser(session.user)} />;
+  }
 
   if (dataLoading) {
     return (
@@ -214,6 +259,9 @@ export default function OutonightApp() {
                   joinedCount={joined.length}
                   joinedEvents={events.filter((e) => joined.includes(e.id))}
                   onAdmin={() => navigate("admin")}
+                  user={user}
+                  isAdmin={isAdmin}
+                  onLogout={handleLogout}
                 />
               )}
             </motion.div>
@@ -746,7 +794,7 @@ function MapScreen({ events, openEvent }) {
 
 // ─── ProfileScreen ────────────────────────────────────────────────────────────
 
-function ProfileScreen({ profile, draft, setDraft, editOpen, setEditOpen, saveProfile, notifications, markRead, markAllRead, joinedCount, joinedEvents, onAdmin }) {
+function ProfileScreen({ profile, draft, setDraft, editOpen, setEditOpen, saveProfile, notifications, markRead, markAllRead, joinedCount, joinedEvents, onAdmin, user, isAdmin, onLogout }) {
   const [notifTab, setNotifTab] = useState("all");
   const unread = notifications.filter((n) => !n.read);
   const visibleNotifs = notifTab === "unread" ? unread : notifications;
@@ -761,13 +809,14 @@ function ProfileScreen({ profile, draft, setDraft, editOpen, setEditOpen, savePr
             <div className="flex items-center gap-3">
               <div className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-[#0B0C11] bg-gradient-to-br from-violet-400 to-purple-600 text-3xl font-semibold text-white">M</div>
               <div>
-                <h2 className="text-lg font-semibold">{profile.name}</h2>
-                <p className="mt-0.5 text-sm text-white/50">{profile.bio}</p>
+                <h2 className="text-lg font-semibold">{user?.user_metadata?.full_name || user?.email?.split("@")[0] || profile.name}</h2>
+                <p className="mt-0.5 text-sm text-white/50">{user?.email || profile.bio}</p>
               </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={onAdmin} className="rounded-2xl border border-violet-400/25 bg-violet-400/10 px-3 py-2 text-xs text-violet-300">+ Event</button>
+              {isAdmin && <button onClick={onAdmin} className="rounded-2xl border border-violet-400/25 bg-violet-400/10 px-3 py-2 text-xs text-violet-300">+ Event</button>}
               <button onClick={() => setEditOpen((v) => !v)} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80">{editOpen ? "Close" : "Edit"}</button>
+              <button onClick={onLogout} className="rounded-2xl border border-red-400/20 bg-red-400/10 px-3 py-2 text-xs text-red-400">Out</button>
             </div>
           </div>
           <div className="mt-4 rounded-[18px] border border-white/8 bg-white/[0.04] p-3 text-sm text-white/60">{profile.mood}</div>
