@@ -14,7 +14,7 @@ const CATEGORY_GRADIENT = {
   culture: "from-amber-500/30 via-orange-500/20 to-yellow-500/20",
 };
 
-function normalizeEvent(ev, barsMap) {
+function normalizeEvent(ev, barsMap, rsvpCountMap = {}) {
   const bar = barsMap[ev.bar_id] || null;
   return {
     ...ev,
@@ -23,7 +23,7 @@ function normalizeEvent(ev, barsMap) {
     barDistance: bar ? bar.distance : "",
     gradient:    CATEGORY_GRADIENT[ev.category] || CATEGORY_GRADIENT.party,
     attendeeIds: [],
-    goingCount:  ev.going_count || 0,
+    goingCount:  rsvpCountMap[ev.id] ?? ev.going_count ?? 0,
   };
 }
 
@@ -62,7 +62,7 @@ export default function OutonightApp() {
   const [isAdmin, setIsAdmin]         = useState(false);
 
   const [route, setRoute]             = useState({ tab: "home", eventId: null });
-  const [joined, setJoined]           = useState(() => loadLS("ot_joined", []));
+  const [joined, setJoined]           = useState([]);
   const [notifications, setNotifications] = useState(NOTIFICATIONS_DATA);
   const [editOpen, setEditOpen]       = useState(false);
   const [toast, setToast]             = useState(null);
@@ -99,10 +99,18 @@ export default function OutonightApp() {
   // ── Fetch bars + events from Supabase ────────────────────────────────────
   useEffect(() => {
     async function fetchData() {
-      const [{ data: barsData }, { data: eventsData }] = await Promise.all([
+      const [{ data: barsData }, { data: eventsData }, { data: rsvpData }] = await Promise.all([
         supabase.from("bars").select("*").order("name"),
         supabase.from("events").select("*").order("date", { ascending: true }),
+        supabase.from("rsvp").select("event_id, user_id"),
       ]);
+
+      const rsvpCountMap = {};
+      if (rsvpData) {
+        rsvpData.forEach(r => { rsvpCountMap[r.event_id] = (rsvpCountMap[r.event_id] || 0) + 1; });
+        const cu = (await supabase.auth.getUser()).data.user;
+        if (cu) setJoined(rsvpData.filter(r => r.user_id === cu.id).map(r => r.event_id));
+      }
 
       const barsMap = {};
       if (barsData) {
@@ -111,7 +119,7 @@ export default function OutonightApp() {
       }
 
       if (eventsData) {
-        const normalized = eventsData.map(ev => normalizeEvent(ev, barsMap));
+        const normalized = eventsData.map(ev => normalizeEvent(ev, barsMap, rsvpCountMap));
         setEvents(normalized);
         // Set initial eventId to first event
         if (normalized.length > 0 && route.eventId === null) {
@@ -138,8 +146,6 @@ export default function OutonightApp() {
     [events]
   );
 
-  useEffect(() => { localStorage.setItem("ot_joined", JSON.stringify(joined)); }, [joined]);
-
   const selectedEvent = useMemo(
     () => events.find((e) => e.id === route.eventId) ?? events[0] ?? null,
     [route.eventId, events]
@@ -154,13 +160,18 @@ export default function OutonightApp() {
   const navigate  = (tab, eventId = route.eventId) => setRoute({ tab, eventId });
   const openEvent = (id) => setRoute({ tab: "event", eventId: id });
 
-  const toggleJoin = (id) => {
-    setJoined((cur) => {
-      const has = cur.includes(id);
-      const ev  = events.find((e) => e.id === id);
-      showToast(has ? `Tu as quitté ${ev?.title}` : `Tu rejoins ${ev?.title} ! 🎉`);
-      return has ? cur.filter((x) => x !== id) : [...cur, id];
-    });
+  const toggleJoin = async (id) => {
+    if (!user) return;
+    const has = joined.includes(id);
+    const ev  = events.find((e) => e.id === id);
+    setJoined(cur => has ? cur.filter(x => x !== id) : [...cur, id]);
+    setEvents(cur => cur.map(e => e.id === id ? { ...e, goingCount: Math.max(0, e.goingCount + (has ? -1 : 1)) } : e));
+    showToast(has ? `Tu as quitté ${ev?.title}` : `Tu rejoins ${ev?.title} ! 🎉`);
+    if (has) {
+      await supabase.from("rsvp").delete().eq("event_id", id).eq("user_id", user.id);
+    } else {
+      await supabase.from("rsvp").insert({ event_id: id, user_id: user.id });
+    }
   };
 
   const markRead    = (id) => setNotifications((cur) => cur.map((n) => n.id === id ? { ...n, read: true } : n));
@@ -239,6 +250,7 @@ export default function OutonightApp() {
                   event={selectedEvent}
                   isJoined={joined.includes(selectedEvent.id)}
                   onJoin={() => toggleJoin(selectedEvent.id)}
+                  user={user}
                 />
               )}
               {route.tab === "map" && <MapScreen events={events} openEvent={openEvent} />}
@@ -667,21 +679,28 @@ function BarCard({ bar, joined, onToggleJoin, onOpenEvent, isExpanded, onToggleE
 
 // ─── EventScreen ──────────────────────────────────────────────────────────────
 
-function EventScreen({ event, isJoined, onJoin }) {
-  const totalGoing = event.goingCount + (isJoined ? 1 : 0);
+function EventScreen({ event, isJoined, onJoin, user }) {
+  const [attendees, setAttendees] = useState([]);
+
+  useEffect(() => {
+    supabase
+      .from("rsvp")
+      .select("user_id, profiles(full_name)")
+      .eq("event_id", event.id)
+      .then(({ data }) => { if (data) setAttendees(data); });
+  }, [event.id, isJoined]);
+
+  const totalGoing = attendees.length || event.goingCount;
 
   return (
     <div className="space-y-4">
-      {/* Hero */}
       <motion.section layout className="overflow-hidden rounded-[30px] border border-white/10 bg-[#11131B]">
         <div className={`relative flex h-60 items-end bg-gradient-to-br ${event.gradient} p-5`}>
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/15 to-transparent" />
           <div className="relative w-full">
             <div className="mb-2 flex items-center gap-2">
               <span className="text-3xl">{event.emoji}</span>
-              {event.badge && (
-                <span className="rounded-full border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/85 backdrop-blur">{event.badge}</span>
-              )}
+              {event.badge && <span className="rounded-full border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/85 backdrop-blur">{event.badge}</span>}
             </div>
             <h2 className="text-2xl font-semibold leading-tight">{event.title}</h2>
             <p className="mt-1.5 text-sm text-white/80">{event.date} · {event.time}</p>
@@ -690,22 +709,17 @@ function EventScreen({ event, isJoined, onJoin }) {
         </div>
       </motion.section>
 
-      {/* Stats */}
       <div className="grid grid-cols-3 gap-2.5">
         <StatCard value={event.price} label="Entry" icon="💳" />
         <StatCard value={event.barDistance || "—"} label="Access" icon="📍" />
         <StatCard value={String(totalGoing)} label="Going" icon="👥" />
       </div>
 
-      {/* About */}
       <section className="rounded-[28px] border border-white/8 bg-white/5 p-4">
         <SectionHeader title="À propos" />
         <p className="mt-3 text-sm leading-6 text-white/70">{event.description || "No description."}</p>
         <div className="mt-4">
-          <button
-            onClick={onJoin}
-            className={`w-full rounded-2xl py-3 text-sm font-semibold transition active:scale-[0.98] ${isJoined ? "bg-violet-500 text-white" : "bg-white text-[#0B0C11]"}`}
-          >
+          <button onClick={onJoin} className={`w-full rounded-2xl py-3 text-sm font-semibold transition active:scale-[0.98] ${isJoined ? "bg-violet-500 text-white" : "bg-white text-[#0B0C11]"}`}>
             {isJoined ? "✓ Tu y vas" : "Rejoindre l'event"}
           </button>
         </div>
@@ -715,16 +729,32 @@ function EventScreen({ event, isJoined, onJoin }) {
         </button>
       </section>
 
-      {/* Going count */}
       <section className="rounded-[28px] border border-white/8 bg-white/5 p-4">
         <SectionHeader title="Qui y va" />
-        <p className="mt-3 text-sm text-white/50">
-          {totalGoing > 0 ? `${totalGoing} student${totalGoing > 1 ? "s" : ""} going` : "Be the first to join!"}
-        </p>
+        {attendees.length === 0 ? (
+          <p className="mt-3 text-sm text-white/40">Be the first to join!</p>
+        ) : (
+          <div className="mt-3 space-y-2">
+            {attendees.map((a, i) => {
+              const name = a.profiles?.full_name || "Student";
+              const isMe = user && a.user_id === user.id;
+              const colors = ["bg-violet-400/20 text-violet-300","bg-sky-400/20 text-sky-300","bg-emerald-400/20 text-emerald-300","bg-amber-400/20 text-amber-300","bg-pink-400/20 text-pink-300"];
+              return (
+                <div key={a.user_id} className="flex items-center gap-3 rounded-[18px] border border-white/6 bg-white/[0.04] px-3 py-2.5">
+                  <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${colors[i % colors.length]}`}>
+                    {name[0].toUpperCase()}
+                  </div>
+                  <span className="text-sm text-white/80">{name}{isMe ? " (toi)" : ""}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </section>
     </div>
   );
 }
+
 
 // ─── MapScreen ────────────────────────────────────────────────────────────────
 
