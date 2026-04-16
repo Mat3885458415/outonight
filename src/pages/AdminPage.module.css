@@ -27,4 +27,5 @@
 .listInfo { flex: 1; }
 .listName { font-size: 13px; font-weight: 500; color: var(--black); }
 .listMeta { font-size: 11px; color: var(--gray-400); margin-top: 2px; }
-.btnDelete { background: var(--red-light); color: var(--red); border: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 12px; font-weight: 700; flex-shrink: 0; }
+.btnDelete { background: var(--red-light); color: var(--red); border: none; width: 28px; height: 28px; border-radius: 50%; cursor: pointer; font-size: 12px; font-weight: 700; flex-shrink: 0; }.toggleRow { display: flex; align-items: center; gap: 10px; font-size: 13px; color: #555; cursor: pointer; padding: 4px 0; }
+.toggleRow input { width: 16px; height: 16px; cursor: pointer; accent-color: #7c3aed; flex-shrink: 0; }

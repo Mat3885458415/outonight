@@ -9,7 +9,7 @@ const COLORS = ['#e8eaf6','#e3f2fd','#ede7f6','#e8f5e9','#fff3e0','#fbe9e7']
 const EMPTY_EVENT = {
   name: '', venue: '', description: '', date: '', time: '',
   price: 'Free', category: 'party', badge: '', emoji: '🎵', color: '#e8eaf6',
-  bar_id: null
+  bar_id: null, is_special: false
 }
 
 export default function AdminPage({ onBack }) {
@@ -149,6 +149,14 @@ export default function AdminPage({ onBack }) {
                   style={{background:c}} onClick={()=>setEvent({...event,color:c})}/>
               ))}
             </div>
+            <label className={styles.toggleRow}>
+              <input
+                type="checkbox"
+                checked={event.is_special}
+                onChange={e => setEvent({...event, is_special: e.target.checked})}
+              />
+              <span>✨ Special event (featured on home screen)</span>
+            </label>
             <button className={styles.btnSubmit} onClick={submitEvent} disabled={loading||!event.name||!event.date}>
               {loading ? 'Adding...' : '+ Publish event'}
             </button>

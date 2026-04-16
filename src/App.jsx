@@ -63,6 +63,8 @@ export default function OutonightApp() {
 
   const [route, setRoute]             = useState({ tab: "home", eventId: null });
   const [joined, setJoined]           = useState([]);
+  const [myPlans, setMyPlans]         = useState([]); // [{ bar_id, plan_date }]
+  const [barPlans, setBarPlans]       = useState({}); // { "date": { barId: count } }
   const [notifications, setNotifications] = useState(NOTIFICATIONS_DATA);
   const [editOpen, setEditOpen]       = useState(false);
   const [toast, setToast]             = useState(null);
@@ -99,17 +101,29 @@ export default function OutonightApp() {
   // ── Fetch bars + events from Supabase ────────────────────────────────────
   useEffect(() => {
     async function fetchData() {
-      const [{ data: barsData }, { data: eventsData }, { data: rsvpData }] = await Promise.all([
+      const [{ data: barsData }, { data: eventsData }, { data: rsvpData }, { data: plansData }] = await Promise.all([
         supabase.from("bars").select("*").order("name"),
         supabase.from("events").select("*").order("date", { ascending: true }),
         supabase.from("rsvp").select("event_id, user_id"),
+        supabase.from("bar_plans").select("bar_id, user_id, plan_date"),
       ]);
+
+      const cu = (await supabase.auth.getUser()).data.user;
 
       const rsvpCountMap = {};
       if (rsvpData) {
         rsvpData.forEach(r => { rsvpCountMap[r.event_id] = (rsvpCountMap[r.event_id] || 0) + 1; });
-        const cu = (await supabase.auth.getUser()).data.user;
         if (cu) setJoined(rsvpData.filter(r => r.user_id === cu.id).map(r => r.event_id));
+      }
+
+      if (plansData) {
+        const map = {};
+        plansData.forEach(p => {
+          if (!map[p.plan_date]) map[p.plan_date] = {};
+          map[p.plan_date][p.bar_id] = (map[p.plan_date][p.bar_id] || 0) + 1;
+        });
+        setBarPlans(map);
+        if (cu) setMyPlans(plansData.filter(p => p.user_id === cu.id).map(p => ({ bar_id: p.bar_id, plan_date: p.plan_date })));
       }
 
       const barsMap = {};
@@ -174,6 +188,27 @@ export default function OutonightApp() {
     }
   };
 
+  const toggleBarPlan = async (barId, date) => {
+    if (!user) return;
+    const has = myPlans.some(p => p.bar_id === barId && p.plan_date === date);
+    const bar = bars.find(b => b.id === barId);
+    setMyPlans(cur => has
+      ? cur.filter(p => !(p.bar_id === barId && p.plan_date === date))
+      : [...cur, { bar_id: barId, plan_date: date }]
+    );
+    setBarPlans(cur => {
+      const day = { ...(cur[date] || {}) };
+      day[barId] = Math.max(0, (day[barId] || 0) + (has ? -1 : 1));
+      return { ...cur, [date]: day };
+    });
+    showToast(has ? `Removed from plans` : `Added ${bar?.name} to your plans! 🗓️`);
+    if (has) {
+      await supabase.from("bar_plans").delete().eq("user_id", user.id).eq("bar_id", barId).eq("plan_date", date);
+    } else {
+      await supabase.from("bar_plans").insert({ user_id: user.id, bar_id: barId, plan_date: date });
+    }
+  };
+
   const markRead    = (id) => setNotifications((cur) => cur.map((n) => n.id === id ? { ...n, read: true } : n));
   const markAllRead = ()   => setNotifications((cur) => cur.map((n) => ({ ...n, read: true })));
   const saveProfile = ()   => { setProfile(draft); setEditOpen(false); showToast("Profile saved ✓"); };
@@ -234,6 +269,9 @@ export default function OutonightApp() {
                   openEvent={openEvent}
                   toggleJoin={toggleJoin}
                   navigate={navigate}
+                  myPlans={myPlans}
+                  barPlans={barPlans}
+                  toggleBarPlan={toggleBarPlan}
                 />
               )}
               {route.tab === "explore" && (
@@ -347,58 +385,102 @@ function TopBar({ route, onBack, onBellClick, unreadCount }) {
 
 // ─── HomeScreen ───────────────────────────────────────────────────────────────
 
-function HomeScreen({ events, bars, unboundEvents, joined, openEvent, toggleJoin, navigate }) {
-  if (events.length === 0) {
-    return (
-      <div className="space-y-6">
-        <div className="rounded-[28px] border border-white/8 bg-white/5 py-16 text-center">
+function buildWeekDays() {
+  const days = [];
+  const today = new Date();
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    const iso = d.toISOString().slice(0, 10);
+    const label = i === 0 ? "Today" : i === 1 ? "Tomorrow" : d.toLocaleDateString("en-US", { weekday: "short" });
+    const num   = d.toLocaleDateString("en-US", { day: "numeric" });
+    days.push({ iso, label, num });
+  }
+  return days;
+}
+
+const WEEK_DAYS = buildWeekDays();
+
+function HomeScreen({ events, bars, unboundEvents, joined, openEvent, toggleJoin, navigate, myPlans, barPlans, toggleBarPlan }) {
+  const [planDay, setPlanDay] = useState(WEEK_DAYS[0].iso);
+
+  const specialEvents = events.filter(e => e.is_special);
+  const regularEvents = events.filter(e => !e.is_special);
+  const hero = regularEvents[0] ?? null;
+
+  const dayPlans = barPlans[planDay] || {};
+  const sortedBars = [...bars].sort((a, b) => (dayPlans[b.id] || 0) - (dayPlans[a.id] || 0));
+
+  return (
+    <div className="space-y-6">
+
+      {/* ── Special Events ── */}
+      {specialEvents.length > 0 && (
+        <section>
+          <SectionHeader title="✨ Special Events" />
+          <div className="mt-3 space-y-3">
+            {specialEvents.map((ev) => (
+              <motion.button
+                key={ev.id}
+                onClick={() => openEvent(ev.id)}
+                className="relative w-full overflow-hidden rounded-[26px] border border-amber-400/25 bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-transparent p-4 text-left transition active:scale-[0.98]"
+              >
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] bg-gradient-to-br ${ev.gradient} text-2xl`}>{ev.emoji}</div>
+                  <div className="min-w-0 flex-1">
+                    <span className="mb-1 inline-block rounded-full bg-amber-400/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-300">Special</span>
+                    <p className="truncate text-sm font-bold">{ev.title}</p>
+                    <p className="mt-0.5 text-xs text-white/55">{ev.barName} · {ev.date} · {ev.time}</p>
+                  </div>
+                  <span className={`shrink-0 text-xs font-semibold ${ev.price === "Free" ? "text-emerald-400" : "text-violet-300"}`}>{ev.price}</span>
+                </div>
+              </motion.button>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Hero event ── */}
+      {hero ? (
+        <motion.section layout className="overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(126,87,255,0.38),_rgba(13,14,21,0.96)_55%)] shadow-[0_20px_80px_rgba(63,32,160,0.28)]">
+          <div className="p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] uppercase tracking-[0.28em] text-violet-200/75">Best pick tonight</p>
+                <h2 className="mt-2 text-[28px] font-semibold leading-tight">{hero.title}</h2>
+                <p className="mt-2 text-sm text-white/65">{hero.barName}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <span className="rounded-full border border-white/10 bg-white/8 px-2.5 py-1 text-xs text-white/70">{hero.date} · {hero.time}</span>
+                  <span className="rounded-full border border-violet-400/25 bg-violet-400/10 px-2.5 py-1 text-xs text-violet-300">{hero.price}</span>
+                </div>
+                <p className="mt-3 text-sm text-violet-200/80">{hero.goingCount} students going</p>
+              </div>
+              <div className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-[24px] bg-gradient-to-br ${hero.gradient} text-4xl`}>{hero.emoji}</div>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <button onClick={() => toggleJoin(hero.id)} className={`rounded-2xl py-3 text-sm font-semibold transition active:scale-[0.98] ${joined.includes(hero.id) ? "bg-violet-500 text-white" : "bg-white text-[#0B0C11]"}`}>
+                {joined.includes(hero.id) ? "✓ Going" : "Join now"}
+              </button>
+              <button onClick={() => openEvent(hero.id)} className="rounded-2xl border border-white/10 bg-white/5 py-3 text-sm text-white/85 transition active:scale-[0.98]">
+                View event
+              </button>
+            </div>
+          </div>
+        </motion.section>
+      ) : (
+        <div className="rounded-[28px] border border-white/8 bg-white/5 py-12 text-center">
           <p className="text-4xl">🌙</p>
           <p className="mt-4 text-sm text-white/50">No events tonight yet.</p>
           <p className="mt-1 text-xs text-white/30">Check back soon!</p>
         </div>
-      </div>
-    );
-  }
+      )}
 
-  const hero = events[0];
-
-  return (
-    <div className="space-y-6">
-      {/* Hero */}
-      <motion.section layout className="overflow-hidden rounded-[28px] border border-white/10 bg-[radial-gradient(circle_at_top_left,_rgba(126,87,255,0.38),_rgba(13,14,21,0.96)_55%)] shadow-[0_20px_80px_rgba(63,32,160,0.28)]">
-        <div className="p-5">
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              <p className="text-[11px] uppercase tracking-[0.28em] text-violet-200/75">Best pick tonight</p>
-              <h2 className="mt-2 text-[28px] font-semibold leading-tight">{hero.title}</h2>
-              <p className="mt-2 text-sm text-white/65">{hero.barName}</p>
-              <div className="mt-2 flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-white/10 bg-white/8 px-2.5 py-1 text-xs text-white/70">{hero.date} · {hero.time}</span>
-                <span className="rounded-full border border-violet-400/25 bg-violet-400/10 px-2.5 py-1 text-xs text-violet-300">{hero.price}</span>
-              </div>
-              <p className="mt-3 text-sm text-violet-200/80">
-                {hero.goingCount} students going
-              </p>
-            </div>
-            <div className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-[24px] bg-gradient-to-br ${hero.gradient} text-4xl`}>{hero.emoji}</div>
-          </div>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <button onClick={() => toggleJoin(hero.id)} className={`rounded-2xl py-3 text-sm font-semibold transition active:scale-[0.98] ${joined.includes(hero.id) ? "bg-violet-500 text-white" : "bg-white text-[#0B0C11]"}`}>
-              {joined.includes(hero.id) ? "✓ Going" : "Join now"}
-            </button>
-            <button onClick={() => openEvent(hero.id)} className="rounded-2xl border border-white/10 bg-white/5 py-3 text-sm text-white/85 transition active:scale-[0.98]">
-              View event
-            </button>
-          </div>
-        </div>
-      </motion.section>
-
-      {/* Tonight's events */}
-      {events.length > 1 && (
+      {/* ── Tonight's events ── */}
+      {regularEvents.length > 1 && (
         <section>
           <SectionHeader title="Tonight" action="See all" onAction={() => navigate("explore")} />
           <div className="mt-3 space-y-2">
-            {events.slice(1, 5).map((event, i) => (
+            {regularEvents.slice(1, 5).map((event, i) => (
               <motion.button
                 key={event.id}
                 initial={{ opacity: 0, y: 10 }}
@@ -416,14 +498,63 @@ function HomeScreen({ events, bars, unboundEvents, joined, openEvent, toggleJoin
                     {event.price === "Free" && <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] text-emerald-400">Free</span>}
                   </div>
                 </div>
-                {event.barDistance && <span className="shrink-0 text-xs text-white/30">{event.barDistance}</span>}
               </motion.button>
             ))}
           </div>
         </section>
       )}
 
-      {/* Bars */}
+      {/* ── Who's going out this week? ── */}
+      <section>
+        <SectionHeader title="Who's going out?" />
+        {/* Day picker */}
+        <div className="-mx-1 mt-3 flex gap-2 overflow-x-auto px-1 pb-1" style={{ scrollbarWidth: "none" }}>
+          {WEEK_DAYS.map(day => {
+            const total = Object.values(barPlans[day.iso] || {}).reduce((s, n) => s + n, 0);
+            const active = planDay === day.iso;
+            return (
+              <button
+                key={day.iso}
+                onClick={() => setPlanDay(day.iso)}
+                className={`flex shrink-0 flex-col items-center rounded-[18px] px-3.5 py-2.5 transition ${active ? "bg-violet-500 text-white" : "border border-white/8 bg-white/5 text-white/60 hover:bg-white/10"}`}
+              >
+                <span className="text-[11px] font-medium">{day.label}</span>
+                <span className={`text-base font-bold leading-tight ${active ? "text-white" : "text-white/80"}`}>{day.num}</span>
+                {total > 0 && (
+                  <span className={`mt-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${active ? "bg-white/25 text-white" : "bg-violet-400/20 text-violet-300"}`}>{total}</span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Bars for selected day */}
+        <div className="mt-3 space-y-2">
+          {sortedBars.map(bar => {
+            const count = dayPlans[bar.id] || 0;
+            const isMe  = myPlans.some(p => p.bar_id === bar.id && p.plan_date === planDay);
+            return (
+              <div key={bar.id} className={`flex items-center gap-3 rounded-[22px] border p-3 transition ${isMe ? "border-violet-400/30 bg-violet-400/8" : "border-white/8 bg-white/5"}`}>
+                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-gradient-to-br ${bar.gradient || "from-violet-500/20 to-indigo-500/20"} text-xl`}>{bar.emoji}</div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold">{bar.name}</p>
+                  <p className="mt-0.5 text-xs text-white/45">
+                    {count > 0 ? `${count} going` : "Be the first!"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => toggleBarPlan(bar.id, planDay)}
+                  className={`shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold transition active:scale-[0.96] ${isMe ? "bg-violet-500 text-white" : "bg-white text-[#0B0C11]"}`}
+                >
+                  {isMe ? "✓ I'm in" : "I'm in"}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* ── Bars strip ── */}
       {bars.length > 0 && (
         <section>
           <SectionHeader title="Bars" action="See all" onAction={() => navigate("explore")} />
