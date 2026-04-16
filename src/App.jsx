@@ -20,7 +20,7 @@ function normalizeEvent(ev, barsMap, rsvpCountMap = {}) {
     ...ev,
     title:       ev.name,
     barName:     bar ? bar.name : (ev.venue || ""),
-    barDistance: bar ? bar.distance : "",
+    barAddress:  bar ? (bar.address || "") : "",
     gradient:    CATEGORY_GRADIENT[ev.category] || CATEGORY_GRADIENT.party,
     attendeeIds: [],
     goingCount:  rsvpCountMap[ev.id] ?? ev.going_count ?? 0,
@@ -754,7 +754,16 @@ function EventScreen({ event, isJoined, onJoin, user }) {
 
       <div className="grid grid-cols-3 gap-2.5">
         <StatCard value={event.price} label="Entry" icon="💳" />
-        <StatCard value={event.barDistance || "—"} label="Access" icon="📍" />
+        <a
+          href={`https://maps.google.com/?q=${encodeURIComponent(event.barAddress || event.barName + ' Zlín')}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="rounded-[20px] border border-white/8 bg-white/5 p-3 text-center flex flex-col items-center active:scale-[0.97] transition"
+        >
+          <div className="mb-1 text-base leading-none">📍</div>
+          <p className="text-[11px] font-semibold text-violet-300 leading-tight truncate w-full px-1">{event.barAddress ? event.barAddress.split(',')[0] : "—"}</p>
+          <p className="mt-0.5 text-[10px] text-white/45">Maps</p>
+        </a>
         <StatCard value={String(totalGoing)} label="Going" icon="👥" />
       </div>
 
