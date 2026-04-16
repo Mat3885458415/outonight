@@ -682,14 +682,43 @@ function BarCard({ bar, joined, onToggleJoin, onOpenEvent, isExpanded, onToggleE
 function EventScreen({ event, isJoined, onJoin, user }) {
   const [attendees, setAttendees] = useState([]);
   const [selectedProfile, setSelectedProfile] = useState(null);
+  const [showShare, setShowShare] = useState(false);
 
   useEffect(() => {
-    supabase
-      .from("rsvp")
-      .select("user_id, profiles(full_name, university, interests)")
-      .eq("event_id", event.id)
-      .then(({ data }) => { if (data) setAttendees(data); });
+    async function fetchAttendees() {
+      const { data: rsvpData } = await supabase
+        .from("rsvp")
+        .select("user_id")
+        .eq("event_id", event.id);
+
+      if (!rsvpData || rsvpData.length === 0) { setAttendees([]); return; }
+
+      const userIds = rsvpData.map(r => r.user_id);
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("id, full_name, university, interests")
+        .in("id", userIds);
+
+      const profilesMap = {};
+      if (profilesData) profilesData.forEach(p => { profilesMap[p.id] = p; });
+
+      setAttendees(rsvpData.map(r => ({
+        user_id: r.user_id,
+        profiles: profilesMap[r.user_id] || null,
+      })));
+    }
+    fetchAttendees();
   }, [event.id, isJoined]);
+
+  const handleShare = async () => {
+    const url = window.location.origin;
+    const text = `Check out "${event.title}" on Outonight! 🌙`;
+    if (navigator.share) {
+      try { await navigator.share({ title: event.title, text, url }); } catch {}
+    } else {
+      setShowShare(true);
+    }
+  };
 
   const totalGoing = attendees.length || event.goingCount;
 
@@ -724,11 +753,42 @@ function EventScreen({ event, isJoined, onJoin, user }) {
             {isJoined ? "✓ You're going" : "Join this event"}
           </button>
         </div>
-        <button className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] py-3 text-sm text-white/65 transition active:scale-[0.98]">
+        <button onClick={handleShare} className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] py-3 text-sm text-white/65 transition active:scale-[0.98]">
           <Share2 size={14} />
           Share with friends
         </button>
       </section>
+
+      {showShare && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowShare(false)}>
+          <motion.div
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="w-full max-w-md rounded-t-[32px] border border-white/10 bg-[#0F1018] p-6 pb-10"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="mb-5 flex items-center justify-between">
+              <span className="text-sm font-semibold">Share event</span>
+              <button onClick={() => setShowShare(false)} className="text-white/40 hover:text-white/70"><X size={18} /></button>
+            </div>
+            <div className="space-y-3">
+              <a
+                href={`https://wa.me/?text=${encodeURIComponent(`Check out "${event.title}" on Outonight! 🌙 ${window.location.origin}`)}`}
+                target="_blank" rel="noopener noreferrer"
+                className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-[#25D366]/10 px-4 py-3 text-sm text-[#25D366] transition active:scale-[0.98]"
+              >
+                <span className="text-xl">💬</span> Share on WhatsApp
+              </a>
+              <button
+                onClick={() => { navigator.clipboard.writeText(window.location.origin); setShowShare(false); }}
+                className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/75 transition active:scale-[0.98]"
+              >
+                <span className="text-xl">🔗</span> Copy link
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
 
       <section className="rounded-[28px] border border-white/8 bg-white/5 p-4">
         <SectionHeader title="Who's going" />
