@@ -377,7 +377,7 @@ function HomeScreen({ events, bars, unboundEvents, joined, openEvent, toggleJoin
                 <span className="rounded-full border border-violet-400/25 bg-violet-400/10 px-2.5 py-1 text-xs text-violet-300">{hero.price}</span>
               </div>
               <p className="mt-3 text-sm text-violet-200/80">
-                {hero.goingCount + (joined.includes(hero.id) ? 1 : 0)} students going
+                {hero.goingCount} students going
               </p>
             </div>
             <div className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-[24px] bg-gradient-to-br ${hero.gradient} text-4xl`}>{hero.emoji}</div>
