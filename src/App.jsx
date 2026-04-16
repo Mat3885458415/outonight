@@ -684,11 +684,20 @@ function EventScreen({ event, isJoined, onJoin, user }) {
   const [selectedProfile, setSelectedProfile] = useState(null);
 
   useEffect(() => {
-    supabase
-      .from("rsvp")
-      .select("user_id, profiles(full_name, university, interests)")
-      .eq("event_id", event.id)
-      .then(({ data }) => { if (data) setAttendees(data); });
+    async function load() {
+      const { data: rows } = await supabase
+        .from("rsvp")
+        .select("user_id")
+        .eq("event_id", event.id);
+      if (!rows || rows.length === 0) { setAttendees([]); return; }
+      const ids = rows.map(r => r.user_id);
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, full_name, university, interests")
+        .in("id", ids);
+      if (profs) setAttendees(profs.map(p => ({ user_id: p.id, profiles: p })));
+    }
+    load();
   }, [event.id, isJoined]);
 
   const totalGoing = attendees.length || event.goingCount;
