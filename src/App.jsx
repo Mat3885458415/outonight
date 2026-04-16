@@ -1,157 +1,36 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Bell, Compass, Home, MapPin, Navigation, Search, Settings, Share2, Sparkles, Star, User, X, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { supabase } from "./lib/supabase";
 
-// ─── Mock users pool ───────────────────────────────────────────────────────────
+// ─── Gradient map by category ─────────────────────────────────────────────────
 
-const USERS = [
-  { id: 1,  init: "M", name: "Matéo D.",   uni: "TBU · France",   flag: "🇫🇷", color: "bg-violet-200 text-violet-900" },
-  { id: 2,  init: "J", name: "Jana K.",    uni: "TBU · Czech",    flag: "🇨🇿", color: "bg-teal-200 text-teal-900" },
-  { id: 3,  init: "A", name: "Andrea L.",  uni: "TBU · Spain",    flag: "🇪🇸", color: "bg-orange-200 text-orange-900" },
-  { id: 4,  init: "K", name: "Karim B.",   uni: "TBU · Morocco",  flag: "🇲🇦", color: "bg-yellow-200 text-yellow-900" },
-  { id: 5,  init: "S", name: "Sofia R.",   uni: "TBU · Italy",    flag: "🇮🇹", color: "bg-pink-200 text-pink-900" },
-  { id: 6,  init: "L", name: "Lena W.",    uni: "TBU · Germany",  flag: "🇩🇪", color: "bg-green-200 text-green-900" },
-  { id: 7,  init: "P", name: "Pedro M.",   uni: "TBU · Portugal", flag: "🇵🇹", color: "bg-blue-200 text-blue-900" },
-  { id: 8,  init: "N", name: "Nikola H.",  uni: "TBU · Czech",    flag: "🇨🇿", color: "bg-red-200 text-red-900" },
-  { id: 9,  init: "R", name: "Rania S.",   uni: "TBU · Tunisia",  flag: "🇹🇳", color: "bg-amber-200 text-amber-900" },
-  { id: 10, init: "T", name: "Tom B.",     uni: "TBU · Belgium",  flag: "🇧🇪", color: "bg-indigo-200 text-indigo-900" },
-  { id: 11, init: "E", name: "Elena P.",   uni: "TBU · Greece",   flag: "🇬🇷", color: "bg-cyan-200 text-cyan-900" },
-  { id: 12, init: "O", name: "Omar F.",    uni: "TBU · Egypt",    flag: "🇪🇬", color: "bg-lime-200 text-lime-900" },
-];
+const CATEGORY_GRADIENT = {
+  party:   "from-violet-500/30 via-fuchsia-500/20 to-indigo-500/20",
+  sport:   "from-sky-500/30 via-cyan-500/20 to-blue-500/20",
+  hobby:   "from-rose-500/30 via-red-500/20 to-orange-500/20",
+  culture: "from-amber-500/30 via-orange-500/20 to-yellow-500/20",
+};
 
-// ─── Bars & their events ───────────────────────────────────────────────────────
+function normalizeEvent(ev, barsMap) {
+  const bar = barsMap[ev.bar_id] || null;
+  return {
+    ...ev,
+    title:       ev.name,
+    barName:     bar ? bar.name : (ev.venue || ""),
+    barDistance: bar ? bar.distance : "",
+    gradient:    CATEGORY_GRADIENT[ev.category] || CATEGORY_GRADIENT.party,
+    attendeeIds: [],
+    goingCount:  ev.going_count || 0,
+  };
+}
 
-const BARS = [
-  {
-    id: "charlie",
-    name: "Charlie",
-    emoji: "🎸",
-    tag: "Live music",
-    description: "Le bar rock de Zlín. Concerts live, bières artisanales et bonne ambiance every night.",
-    gradient: "from-rose-500/30 via-red-500/20 to-orange-500/20",
-    color: "rose",
-    distance: "5 min walk",
-    open: true,
-    events: [
-      {
-        id: 101,
-        barId: "charlie",
-        title: "Rock Night Open Stage",
-        time: "Tonight · 21:00",
-        date: "Friday",
-        price: "Free",
-        tag: "Live",
-        emoji: "🎸",
-        gradient: "from-rose-500/30 via-red-500/20 to-orange-500/20",
-        description: "Open stage — n'importe qui peut monter jouer. Ambiance rock garantie.",
-        attendeeIds: [1, 3, 5, 6, 10, 11],
-      },
-      {
-        id: 102,
-        barId: "charlie",
-        title: "Happy Hour Jeudi",
-        time: "Tonight · 18:00",
-        date: "Thursday",
-        price: "80 CZK",
-        tag: "Deal",
-        emoji: "🍺",
-        gradient: "from-amber-500/30 via-orange-500/20 to-yellow-500/20",
-        description: "2-for-1 sur toutes les bières pression jusqu'à 21h. Idéal après les cours.",
-        attendeeIds: [2, 4, 7, 9],
-      },
-    ],
-  },
-  {
-    id: "infinity",
-    name: "Infinity",
-    emoji: "∞",
-    tag: "Club · Techno",
-    description: "Le club électro de référence à Zlín. DJs locaux et internationaux every weekend.",
-    gradient: "from-violet-500/30 via-fuchsia-500/20 to-indigo-500/20",
-    color: "violet",
-    distance: "8 min walk",
-    open: false,
-    events: [
-      {
-        id: 201,
-        barId: "infinity",
-        title: "Techno Night #12",
-        time: "Sat · 23:00",
-        date: "Saturday",
-        price: "150 CZK",
-        tag: "Trending",
-        emoji: "🎵",
-        gradient: "from-violet-500/30 via-fuchsia-500/20 to-indigo-500/20",
-        description: "La plus grande soirée techno du mois. Set de 5h, bar ouvert jusqu'à 4h du matin.",
-        attendeeIds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-      },
-      {
-        id: 202,
-        barId: "infinity",
-        title: "Erasmus Night",
-        time: "Fri · 22:00",
-        date: "Friday",
-        price: "Free",
-        tag: "Erasmus",
-        emoji: "🌍",
-        gradient: "from-pink-500/30 via-rose-500/20 to-orange-500/20",
-        description: "Soirée dédiée aux étudiants Erasmus. Entrée gratuite avec carte TBU.",
-        attendeeIds: [1, 3, 4, 7, 9, 11],
-      },
-    ],
-  },
-  {
-    id: "flip",
-    name: "Flip",
-    emoji: "🎱",
-    tag: "Bar · Billard",
-    description: "Bar décontracté avec billard, ping-pong et terrasse. L'endroit parfait pour débuter la soirée.",
-    gradient: "from-sky-500/30 via-cyan-500/20 to-blue-500/20",
-    color: "sky",
-    distance: "12 min walk",
-    open: true,
-    events: [
-      {
-        id: 301,
-        barId: "flip",
-        title: "Billard Tournament",
-        time: "Tomorrow · 19:00",
-        date: "Saturday",
-        price: "50 CZK",
-        tag: "Sport",
-        emoji: "🎱",
-        gradient: "from-sky-500/30 via-cyan-500/20 to-blue-500/20",
-        description: "Tournoi de billard en duo. Inscription sur place. Lots pour le top 3.",
-        attendeeIds: [2, 5, 8, 10, 12],
-      },
-      {
-        id: 302,
-        barId: "flip",
-        title: "Thursday Chill",
-        time: "Tonight · 20:00",
-        date: "Thursday",
-        price: "Free",
-        tag: "Chill",
-        emoji: "🍸",
-        gradient: "from-cyan-500/30 via-teal-500/20 to-green-500/20",
-        description: "Soirée tranquille, bonne musique, cocktails à prix étudiant. Viens avec tes potes.",
-        attendeeIds: [1, 6, 7, 11],
-      },
-    ],
-  },
-];
-
-// Flatten all bar events into a single array for Home/Map screens
-const ALL_EVENTS = BARS.flatMap((bar) =>
-  bar.events.map((ev) => ({ ...ev, barName: bar.name, barDistance: bar.distance }))
-);
-
-// ─── Notifications ─────────────────────────────────────────────────────────────
+// ─── Notifications (static for now) ──────────────────────────────────────────
 
 const NOTIFICATIONS_DATA = [
-  { id: 1, type: "Friends", icon: Sparkles, text: "3 friends are going to Techno Night #12 @ Infinity", time: "Now", read: false },
-  { id: 2, type: "Event",   icon: Star,     text: "Rock Night Open Stage starts tonight at 21:00 @ Charlie", time: "1 h ago", read: false },
-  { id: 3, type: "Offer",   icon: Bell,     text: "Happy Hour Jeudi — 80 CZK beers tonight @ Charlie", time: "3 h ago", read: true },
+  { id: 1, type: "Friends", icon: Sparkles, text: "3 friends are going to an event tonight", time: "Now", read: false },
+  { id: 2, type: "Event",   icon: Star,     text: "Check out tonight's events in Zlín", time: "1 h ago", read: false },
+  { id: 3, type: "Offer",   icon: Bell,     text: "Happy Hour — special deals tonight", time: "3 h ago", read: true },
 ];
 
 const TABS = [
@@ -173,7 +52,11 @@ function loadLS(key, fallback) {
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 export default function OutonightApp() {
-  const [route, setRoute]             = useState({ tab: "home", eventId: 101 });
+  const [bars, setBars]               = useState([]);
+  const [events, setEvents]           = useState([]);
+  const [dataLoading, setDataLoading] = useState(true);
+
+  const [route, setRoute]             = useState({ tab: "home", eventId: null });
   const [joined, setJoined]           = useState(() => loadLS("ot_joined", []));
   const [notifications, setNotifications] = useState(NOTIFICATIONS_DATA);
   const [editOpen, setEditOpen]       = useState(false);
@@ -182,21 +65,54 @@ export default function OutonightApp() {
   const [draft, setDraft]             = useState(profile);
   const toastRef = useRef(null);
 
+  // ── Fetch bars + events from Supabase ────────────────────────────────────
+  useEffect(() => {
+    async function fetchData() {
+      const [{ data: barsData }, { data: eventsData }] = await Promise.all([
+        supabase.from("bars").select("*").order("name"),
+        supabase.from("events").select("*").order("date", { ascending: true }),
+      ]);
+
+      const barsMap = {};
+      if (barsData) {
+        barsData.forEach(b => { barsMap[b.id] = b; });
+        setBars(barsData);
+      }
+
+      if (eventsData) {
+        const normalized = eventsData.map(ev => normalizeEvent(ev, barsMap));
+        setEvents(normalized);
+        // Set initial eventId to first event
+        if (normalized.length > 0 && route.eventId === null) {
+          setRoute(r => ({ ...r, eventId: normalized[0].id }));
+        }
+      }
+
+      setDataLoading(false);
+    }
+    fetchData();
+  }, []);
+
+  // ── Build barsWithEvents for ExploreScreen ────────────────────────────────
+  const barsWithEvents = useMemo(() => {
+    return bars.map(bar => ({
+      ...bar,
+      events: events.filter(ev => ev.bar_id === bar.id),
+    }));
+  }, [bars, events]);
+
+  // Events not assigned to any bar
+  const unboundEvents = useMemo(
+    () => events.filter(ev => !ev.bar_id),
+    [events]
+  );
+
   useEffect(() => { localStorage.setItem("ot_joined", JSON.stringify(joined)); }, [joined]);
 
   const selectedEvent = useMemo(
-    () => ALL_EVENTS.find((e) => e.id === route.eventId) ?? ALL_EVENTS[0],
-    [route.eventId]
+    () => events.find((e) => e.id === route.eventId) ?? events[0] ?? null,
+    [route.eventId, events]
   );
-
-  // Build attendee list for selected event: mock users + current user if joined
-  const selectedAttendees = useMemo(() => {
-    const base = selectedEvent.attendeeIds.map((id) => USERS.find((u) => u.id === id)).filter(Boolean);
-    if (joined.includes(selectedEvent.id) && !selectedEvent.attendeeIds.includes(1)) {
-      return [USERS[0], ...base];
-    }
-    return base;
-  }, [selectedEvent, joined]);
 
   const showToast = (msg) => {
     clearTimeout(toastRef.current);
@@ -210,7 +126,7 @@ export default function OutonightApp() {
   const toggleJoin = (id) => {
     setJoined((cur) => {
       const has = cur.includes(id);
-      const ev  = ALL_EVENTS.find((e) => e.id === id);
+      const ev  = events.find((e) => e.id === id);
       showToast(has ? `Tu as quitté ${ev?.title}` : `Tu rejoins ${ev?.title} ! 🎉`);
       return has ? cur.filter((x) => x !== id) : [...cur, id];
     });
@@ -221,6 +137,17 @@ export default function OutonightApp() {
   const saveProfile = ()   => { setProfile(draft); setEditOpen(false); showToast("Profil sauvegardé ✓"); };
 
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  if (dataLoading) {
+    return (
+      <div className="min-h-screen bg-[#07080C] text-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-4xl mb-4">🌙</div>
+          <p className="text-white/60 text-sm">Loading tonight's events...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#07080C] text-white">
@@ -242,17 +169,47 @@ export default function OutonightApp() {
               transition={{ duration: 0.22, ease: "easeOut" }}
             >
               {route.tab === "home" && (
-                <HomeScreen events={ALL_EVENTS} bars={BARS} joined={joined} openEvent={openEvent} toggleJoin={toggleJoin} navigate={navigate} />
+                <HomeScreen
+                  events={events}
+                  bars={bars}
+                  unboundEvents={unboundEvents}
+                  joined={joined}
+                  openEvent={openEvent}
+                  toggleJoin={toggleJoin}
+                  navigate={navigate}
+                />
               )}
               {route.tab === "explore" && (
-                <ExploreScreen bars={BARS} joined={joined} onToggleJoin={toggleJoin} onOpenEvent={openEvent} />
+                <ExploreScreen
+                  barsWithEvents={barsWithEvents}
+                  unboundEvents={unboundEvents}
+                  joined={joined}
+                  onToggleJoin={toggleJoin}
+                  onOpenEvent={openEvent}
+                />
               )}
-              {route.tab === "event" && (
-                <EventScreen event={selectedEvent} attendees={selectedAttendees} isJoined={joined.includes(selectedEvent.id)} onJoin={() => toggleJoin(selectedEvent.id)} />
+              {route.tab === "event" && selectedEvent && (
+                <EventScreen
+                  event={selectedEvent}
+                  isJoined={joined.includes(selectedEvent.id)}
+                  onJoin={() => toggleJoin(selectedEvent.id)}
+                />
               )}
-              {route.tab === "map" && <MapScreen events={ALL_EVENTS} openEvent={openEvent} />}
+              {route.tab === "map" && <MapScreen events={events} openEvent={openEvent} />}
               {route.tab === "profile" && (
-                <ProfileScreen profile={profile} draft={draft} setDraft={setDraft} editOpen={editOpen} setEditOpen={setEditOpen} saveProfile={saveProfile} notifications={notifications} markRead={markRead} markAllRead={markAllRead} joinedCount={joined.length} joinedEvents={ALL_EVENTS.filter((e) => joined.includes(e.id))} />
+                <ProfileScreen
+                  profile={profile}
+                  draft={draft}
+                  setDraft={setDraft}
+                  editOpen={editOpen}
+                  setEditOpen={setEditOpen}
+                  saveProfile={saveProfile}
+                  notifications={notifications}
+                  markRead={markRead}
+                  markAllRead={markAllRead}
+                  joinedCount={joined.length}
+                  joinedEvents={events.filter((e) => joined.includes(e.id))}
+                />
               )}
             </motion.div>
           </AnimatePresence>
@@ -325,8 +282,21 @@ function TopBar({ route, onBack, onBellClick, unreadCount }) {
 
 // ─── HomeScreen ───────────────────────────────────────────────────────────────
 
-function HomeScreen({ events, bars, joined, openEvent, toggleJoin, navigate }) {
+function HomeScreen({ events, bars, unboundEvents, joined, openEvent, toggleJoin, navigate }) {
+  if (events.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="rounded-[28px] border border-white/8 bg-white/5 py-16 text-center">
+          <p className="text-4xl">🌙</p>
+          <p className="mt-4 text-sm text-white/50">No events tonight yet.</p>
+          <p className="mt-1 text-xs text-white/30">Check back soon!</p>
+        </div>
+      </div>
+    );
+  }
+
   const hero = events[0];
+
   return (
     <div className="space-y-6">
       {/* Hero */}
@@ -338,10 +308,12 @@ function HomeScreen({ events, bars, joined, openEvent, toggleJoin, navigate }) {
               <h2 className="mt-2 text-[28px] font-semibold leading-tight">{hero.title}</h2>
               <p className="mt-2 text-sm text-white/65">{hero.barName}</p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
-                <span className="rounded-full border border-white/10 bg-white/8 px-2.5 py-1 text-xs text-white/70">{hero.time}</span>
+                <span className="rounded-full border border-white/10 bg-white/8 px-2.5 py-1 text-xs text-white/70">{hero.date} · {hero.time}</span>
                 <span className="rounded-full border border-violet-400/25 bg-violet-400/10 px-2.5 py-1 text-xs text-violet-300">{hero.price}</span>
               </div>
-              <p className="mt-3 text-sm text-violet-200/80">{hero.attendeeIds.length + (joined.includes(hero.id) ? 1 : 0)} students going</p>
+              <p className="mt-3 text-sm text-violet-200/80">
+                {hero.goingCount + (joined.includes(hero.id) ? 1 : 0)} students going
+              </p>
             </div>
             <div className={`flex h-20 w-20 shrink-0 items-center justify-center rounded-[24px] bg-gradient-to-br ${hero.gradient} text-4xl`}>{hero.emoji}</div>
           </div>
@@ -357,80 +329,95 @@ function HomeScreen({ events, bars, joined, openEvent, toggleJoin, navigate }) {
       </motion.section>
 
       {/* Tonight's events */}
-      <section>
-        <SectionHeader title="Tonight" action="Voir tout" onAction={() => navigate("explore")} />
-        <div className="mt-3 space-y-2">
-          {events.slice(1, 5).map((event, i) => (
-            <motion.button
-              key={event.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              onClick={() => openEvent(event.id)}
-              className="flex w-full items-center gap-3 rounded-[22px] border border-white/8 bg-white/5 p-3 text-left transition hover:bg-white/[0.07] active:scale-[0.99]"
-            >
-              <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] bg-gradient-to-br ${event.gradient} text-2xl`}>{event.emoji}</div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold">{event.title}</p>
-                <p className="mt-0.5 truncate text-xs text-white/50">{event.time} · {event.barName}</p>
-                <div className="mt-1.5 flex items-center gap-2">
-                  <span className="text-xs text-violet-300">{event.attendeeIds.length} going</span>
-                  {event.price === "Free" && <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] text-emerald-400">Free</span>}
+      {events.length > 1 && (
+        <section>
+          <SectionHeader title="Tonight" action="Voir tout" onAction={() => navigate("explore")} />
+          <div className="mt-3 space-y-2">
+            {events.slice(1, 5).map((event, i) => (
+              <motion.button
+                key={event.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                onClick={() => openEvent(event.id)}
+                className="flex w-full items-center gap-3 rounded-[22px] border border-white/8 bg-white/5 p-3 text-left transition hover:bg-white/[0.07] active:scale-[0.99]"
+              >
+                <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-[18px] bg-gradient-to-br ${event.gradient} text-2xl`}>{event.emoji}</div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold">{event.title}</p>
+                  <p className="mt-0.5 truncate text-xs text-white/50">{event.date} · {event.time} · {event.barName}</p>
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <span className="text-xs text-violet-300">{event.goingCount} going</span>
+                    {event.price === "Free" && <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] text-emerald-400">Free</span>}
+                  </div>
                 </div>
-              </div>
-              <span className="shrink-0 text-xs text-white/30">{event.barDistance}</span>
-            </motion.button>
-          ))}
-        </div>
-      </section>
+                {event.barDistance && <span className="shrink-0 text-xs text-white/30">{event.barDistance}</span>}
+              </motion.button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Bars */}
-      <section>
-        <SectionHeader title="Les bars" action="Voir tout" onAction={() => navigate("explore")} />
-        <div className="-mx-1 mt-3 flex gap-3 overflow-x-auto px-1 pb-2" style={{ scrollbarWidth: "none" }}>
-          {bars.map((bar, i) => (
-            <motion.div
-              key={bar.id}
-              initial={{ opacity: 0, x: 12 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.06 }}
-              className="w-40 shrink-0 overflow-hidden rounded-[22px] border border-white/8 bg-white/5"
-            >
-              <div className={`flex h-20 items-center justify-center bg-gradient-to-br ${bar.gradient} text-4xl`}>{bar.emoji}</div>
-              <div className="p-3">
-                <p className="truncate text-sm font-semibold">{bar.name}</p>
-                <p className="mt-0.5 text-xs text-white/45">{bar.tag}</p>
-                <div className="mt-2 flex items-center justify-between">
-                  <span className="text-xs text-white/35">{bar.distance}</span>
-                  <span className={`rounded-full px-2 py-0.5 text-[10px] ${bar.open ? "bg-emerald-500/15 text-emerald-400" : "bg-white/8 text-white/35"}`}>
-                    {bar.open ? "Open" : "Closed"}
-                  </span>
+      {bars.length > 0 && (
+        <section>
+          <SectionHeader title="Les bars" action="Voir tout" onAction={() => navigate("explore")} />
+          <div className="-mx-1 mt-3 flex gap-3 overflow-x-auto px-1 pb-2" style={{ scrollbarWidth: "none" }}>
+            {bars.map((bar, i) => (
+              <motion.div
+                key={bar.id}
+                initial={{ opacity: 0, x: 12 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.06 }}
+                className="w-40 shrink-0 overflow-hidden rounded-[22px] border border-white/8 bg-white/5"
+              >
+                <div className={`flex h-20 items-center justify-center bg-gradient-to-br ${bar.gradient || "from-violet-500/20 to-indigo-500/20"} text-4xl`}>{bar.emoji}</div>
+                <div className="p-3">
+                  <p className="truncate text-sm font-semibold">{bar.name}</p>
+                  <p className="mt-0.5 text-xs text-white/45">{bar.tag}</p>
+                  <div className="mt-2 flex items-center justify-between">
+                    <span className="text-xs text-white/35">{bar.distance}</span>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] ${bar.open ? "bg-emerald-500/15 text-emerald-400" : "bg-white/8 text-white/35"}`}>
+                      {bar.open ? "Open" : "Closed"}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </section>
+              </motion.div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
 
-// ─── ExploreScreen — bars ─────────────────────────────────────────────────────
+// ─── ExploreScreen ────────────────────────────────────────────────────────────
 
-function ExploreScreen({ bars, joined, onToggleJoin, onOpenEvent }) {
+function ExploreScreen({ barsWithEvents, unboundEvents, joined, onToggleJoin, onOpenEvent }) {
   const [search, setSearch] = useState("");
-  const [expanded, setExpanded] = useState(null); // bar id currently expanded
+  const [expanded, setExpanded] = useState(null);
 
   const filteredBars = useMemo(() => {
     const q = search.toLowerCase().trim();
-    if (!q) return bars;
-    return bars.filter(
+    if (!q) return barsWithEvents;
+    return barsWithEvents.filter(
       (b) =>
         b.name.toLowerCase().includes(q) ||
-        b.tag.toLowerCase().includes(q) ||
+        (b.tag || "").toLowerCase().includes(q) ||
         b.events.some((e) => e.title.toLowerCase().includes(q))
     );
-  }, [bars, search]);
+  }, [barsWithEvents, search]);
+
+  const filteredUnbound = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    if (!q) return unboundEvents;
+    return unboundEvents.filter(e =>
+      e.title.toLowerCase().includes(q) ||
+      (e.venue || "").toLowerCase().includes(q)
+    );
+  }, [unboundEvents, search]);
+
+  const hasResults = filteredBars.length > 0 || filteredUnbound.length > 0;
 
   return (
     <div className="space-y-4">
@@ -448,28 +435,72 @@ function ExploreScreen({ bars, joined, onToggleJoin, onOpenEvent }) {
         )}
       </div>
 
-      {/* Count */}
-      <p className="text-xs text-white/35">{filteredBars.length} bar{filteredBars.length > 1 ? "s" : ""} disponible{filteredBars.length > 1 ? "s" : ""}</p>
+      {!hasResults ? (
+        <EmptyState message="Aucun résultat" />
+      ) : (
+        <>
+          {/* Bar cards */}
+          <div className="space-y-4">
+            {filteredBars.map((bar, i) => (
+              <BarCard
+                key={bar.id}
+                bar={bar}
+                joined={joined}
+                onToggleJoin={onToggleJoin}
+                onOpenEvent={onOpenEvent}
+                isExpanded={expanded === bar.id}
+                onToggleExpand={() => setExpanded(expanded === bar.id ? null : bar.id)}
+                index={i}
+              />
+            ))}
+          </div>
 
-      {/* Bar cards */}
-      <div className="space-y-4">
-        {filteredBars.length === 0 ? (
-          <EmptyState message="Aucun bar trouvé" />
-        ) : (
-          filteredBars.map((bar, i) => (
-            <BarCard
-              key={bar.id}
-              bar={bar}
-              joined={joined}
-              onToggleJoin={onToggleJoin}
-              onOpenEvent={onOpenEvent}
-              isExpanded={expanded === bar.id}
-              onToggleExpand={() => setExpanded(expanded === bar.id ? null : bar.id)}
-              index={i}
-            />
-          ))
-        )}
-      </div>
+          {/* Unbound events (no bar) */}
+          {filteredUnbound.length > 0 && (
+            <div>
+              <p className="mb-3 text-xs uppercase tracking-[0.22em] text-white/35">Other events</p>
+              <div className="space-y-3">
+                {filteredUnbound.map((event) => {
+                  const isJoined = joined.includes(event.id);
+                  return (
+                    <div key={event.id} className="rounded-[22px] border border-white/8 bg-white/[0.04] p-4">
+                      <div className="flex items-start gap-3">
+                        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-gradient-to-br ${event.gradient} text-2xl`}>
+                          {event.emoji}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <button onClick={() => onOpenEvent(event.id)} className="text-left text-sm font-semibold hover:text-violet-200 transition">
+                            {event.title}
+                          </button>
+                          <p className="mt-0.5 text-xs text-white/50">{event.date} · {event.time}</p>
+                          <div className="mt-1.5 flex items-center gap-2">
+                            <span className="text-xs text-violet-300">{event.goingCount} going</span>
+                            <span className={`text-xs font-medium ${event.price === "Free" ? "text-emerald-400" : "text-white/60"}`}>{event.price}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="mt-3 grid grid-cols-2 gap-2.5">
+                        <button
+                          onClick={() => onToggleJoin(event.id)}
+                          className={`rounded-xl py-2 text-sm font-semibold transition active:scale-[0.97] ${isJoined ? "bg-violet-500 text-white" : "bg-white text-[#0B0C11]"}`}
+                        >
+                          {isJoined ? "✓ Going" : "Join"}
+                        </button>
+                        <button
+                          onClick={() => onOpenEvent(event.id)}
+                          className="rounded-xl border border-white/10 bg-white/5 py-2 text-sm text-white/75 transition active:scale-[0.97]"
+                        >
+                          Détails
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -483,7 +514,7 @@ function BarCard({ bar, joined, onToggleJoin, onOpenEvent, isExpanded, onToggleE
       className="overflow-hidden rounded-[28px] border border-white/8 bg-white/5"
     >
       {/* Bar header */}
-      <div className={`relative flex h-32 items-end bg-gradient-to-br ${bar.gradient} p-4`}>
+      <div className={`relative flex h-32 items-end bg-gradient-to-br ${bar.gradient || "from-violet-500/20 to-indigo-500/20"} p-4`}>
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
         <div className="relative flex w-full items-end justify-between gap-3">
           <div>
@@ -508,17 +539,23 @@ function BarCard({ bar, joined, onToggleJoin, onOpenEvent, isExpanded, onToggleE
       <div className="p-4">
         <p className="text-sm text-white/60 leading-5">{bar.description}</p>
 
-        <button
-          onClick={onToggleExpand}
-          className="mt-3 flex w-full items-center justify-between rounded-2xl border border-white/8 bg-white/[0.04] px-4 py-3 text-sm text-white/75 transition hover:bg-white/[0.07]"
-        >
-          <span className="font-medium">
-            {bar.events.length} event{bar.events.length > 1 ? "s" : ""} à venir
-          </span>
-          <motion.span animate={{ rotate: isExpanded ? 90 : 0 }} transition={{ duration: 0.2 }}>
-            <ChevronRight size={16} className="text-white/40" />
-          </motion.span>
-        </button>
+        {bar.events.length > 0 ? (
+          <button
+            onClick={onToggleExpand}
+            className="mt-3 flex w-full items-center justify-between rounded-2xl border border-white/8 bg-white/[0.04] px-4 py-3 text-sm text-white/75 transition hover:bg-white/[0.07]"
+          >
+            <span className="font-medium">
+              {bar.events.length} event{bar.events.length > 1 ? "s" : ""} à venir
+            </span>
+            <motion.span animate={{ rotate: isExpanded ? 90 : 0 }} transition={{ duration: 0.2 }}>
+              <ChevronRight size={16} className="text-white/40" />
+            </motion.span>
+          </button>
+        ) : (
+          <div className="mt-3 rounded-2xl border border-white/6 bg-white/[0.02] px-4 py-3 text-center text-xs text-white/30">
+            No upcoming events
+          </div>
+        )}
 
         {/* Events list */}
         <AnimatePresence>
@@ -542,9 +579,9 @@ function BarCard({ bar, joined, onToggleJoin, onOpenEvent, isExpanded, onToggleE
                           <button onClick={() => onOpenEvent(event.id)} className="text-left text-sm font-semibold hover:text-violet-200 transition">
                             {event.title}
                           </button>
-                          <p className="mt-0.5 text-xs text-white/50">{event.time}</p>
+                          <p className="mt-0.5 text-xs text-white/50">{event.date} · {event.time}</p>
                           <div className="mt-1.5 flex items-center gap-2">
-                            <span className="text-xs text-violet-300">{event.attendeeIds.length} going</span>
+                            <span className="text-xs text-violet-300">{event.goingCount} going</span>
                             <span className={`text-xs font-medium ${event.price === "Free" ? "text-emerald-400" : "text-white/60"}`}>{event.price}</span>
                           </div>
                         </div>
@@ -577,10 +614,8 @@ function BarCard({ bar, joined, onToggleJoin, onOpenEvent, isExpanded, onToggleE
 
 // ─── EventScreen ──────────────────────────────────────────────────────────────
 
-function EventScreen({ event, attendees, isJoined, onJoin }) {
-  const [showAllAttendees, setShowAllAttendees] = useState(false);
-  const preview = attendees.slice(0, 5);
-  const rest    = attendees.length - 5;
+function EventScreen({ event, isJoined, onJoin }) {
+  const totalGoing = event.goingCount + (isJoined ? 1 : 0);
 
   return (
     <div className="space-y-4">
@@ -591,7 +626,9 @@ function EventScreen({ event, attendees, isJoined, onJoin }) {
           <div className="relative w-full">
             <div className="mb-2 flex items-center gap-2">
               <span className="text-3xl">{event.emoji}</span>
-              <span className="rounded-full border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/85 backdrop-blur">{event.tag}</span>
+              {event.badge && (
+                <span className="rounded-full border border-white/15 bg-black/20 px-3 py-1.5 text-xs text-white/85 backdrop-blur">{event.badge}</span>
+              )}
             </div>
             <h2 className="text-2xl font-semibold leading-tight">{event.title}</h2>
             <p className="mt-1.5 text-sm text-white/80">{event.date} · {event.time}</p>
@@ -603,14 +640,14 @@ function EventScreen({ event, attendees, isJoined, onJoin }) {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2.5">
         <StatCard value={event.price} label="Entry" icon="💳" />
-        <StatCard value={event.barDistance ?? "—"} label="Access" icon="📍" />
-        <StatCard value={String(attendees.length)} label="Going" icon="👥" />
+        <StatCard value={event.barDistance || "—"} label="Access" icon="📍" />
+        <StatCard value={String(totalGoing)} label="Going" icon="👥" />
       </div>
 
       {/* About */}
       <section className="rounded-[28px] border border-white/8 bg-white/5 p-4">
         <SectionHeader title="À propos" />
-        <p className="mt-3 text-sm leading-6 text-white/70">{event.description}</p>
+        <p className="mt-3 text-sm leading-6 text-white/70">{event.description || "No description."}</p>
         <div className="mt-4">
           <button
             onClick={onJoin}
@@ -625,73 +662,12 @@ function EventScreen({ event, attendees, isJoined, onJoin }) {
         </button>
       </section>
 
-      {/* Attendees */}
+      {/* Going count */}
       <section className="rounded-[28px] border border-white/8 bg-white/5 p-4">
-        <div className="flex items-center justify-between gap-3">
-          <SectionHeader title="Qui y va" />
-          {attendees.length > 5 && (
-            <button
-              onClick={() => setShowAllAttendees((v) => !v)}
-              className="flex items-center gap-1 text-sm text-violet-300 hover:text-violet-200 transition"
-            >
-              {showAllAttendees ? "Réduire" : `Voir tout (${attendees.length})`}
-              <ChevronRight size={14} className={`transition-transform ${showAllAttendees ? "rotate-90" : ""}`} />
-            </button>
-          )}
-        </div>
-
-        {/* Avatar row */}
-        <div className="mt-4 flex -space-x-3">
-          {preview.map((user, i) => (
-            <div
-              key={user.id}
-              title={`${user.name} ${user.flag}`}
-              className={`flex h-10 w-10 items-center justify-center rounded-full border-2 border-[#0B0C11] text-sm font-semibold ${user.color}`}
-              style={{ zIndex: 10 - i }}
-            >
-              {user.init}
-            </div>
-          ))}
-          {rest > 0 && !showAllAttendees && (
-            <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-[#0B0C11] bg-white/10 text-xs text-white/55" style={{ zIndex: 4 }}>
-              +{rest}
-            </div>
-          )}
-        </div>
-
-        {/* Expanded list */}
-        <AnimatePresence>
-          {showAllAttendees && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden"
-            >
-              <div className="mt-4 space-y-2">
-                {attendees.map((user) => (
-                  <div key={user.id} className="flex items-center gap-3 rounded-[18px] border border-white/6 bg-white/[0.04] p-3">
-                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${user.color}`}>
-                      {user.init}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">{user.name}</p>
-                      <p className="text-xs text-white/45">{user.uni}</p>
-                    </div>
-                    <span className="text-base">{user.flag}</span>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {!showAllAttendees && (
-          <p className="mt-3 text-sm text-white/50">
-            {attendees.slice(0, 3).map((u) => u.name.split(" ")[0]).join(", ")}
-            {attendees.length > 3 ? ` et ${attendees.length - 3} autres` : ""}
-          </p>
-        )}
+        <SectionHeader title="Qui y va" />
+        <p className="mt-3 text-sm text-white/50">
+          {totalGoing > 0 ? `${totalGoing} student${totalGoing > 1 ? "s" : ""} going` : "Be the first to join!"}
+        </p>
       </section>
     </div>
   );
@@ -730,7 +706,7 @@ function MapScreen({ events, openEvent }) {
                     className="rounded-xl border border-white/10 bg-[#0B0C11]/90 px-3 py-1.5 text-center text-xs backdrop-blur shadow-xl"
                   >
                     <p className="font-semibold text-white">{event.title}</p>
-                    <p className="text-white/50">{event.barName} · {event.barDistance}</p>
+                    <p className="text-white/50">{event.barName}{event.barDistance ? ` · ${event.barDistance}` : ""}</p>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -751,12 +727,13 @@ function MapScreen({ events, openEvent }) {
               <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${event.gradient} text-xl`}>{event.emoji}</div>
               <div>
                 <p className="text-sm font-semibold">{event.title}</p>
-                <p className="mt-0.5 text-xs text-white/45">{event.barName} · {event.barDistance}</p>
+                <p className="mt-0.5 text-xs text-white/45">{event.barName}{event.barDistance ? ` · ${event.barDistance}` : ""}</p>
               </div>
             </div>
             <span className={`text-xs font-medium ${event.price === "Free" ? "text-emerald-400" : "text-violet-300"}`}>{event.price}</span>
           </button>
         ))}
+        {events.length === 0 && <EmptyState message="No events on map yet" />}
       </div>
     </div>
   );
@@ -794,7 +771,7 @@ function ProfileScreen({ profile, draft, setDraft, editOpen, setEditOpen, savePr
       {/* Stats */}
       <div className="grid grid-cols-3 gap-2.5">
         <StatCard value={String(joinedCount)} label="Joined" icon="🎟️" />
-        <StatCard value="34" label="Friends" icon="👥" />
+        <StatCard value="—" label="Friends" icon="👥" />
         <StatCard value={String(unread.length)} label="Unread" icon="🔔" />
       </div>
 
@@ -833,7 +810,7 @@ function ProfileScreen({ profile, draft, setDraft, editOpen, setEditOpen, savePr
                 <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${event.gradient} text-xl`}>{event.emoji}</div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{event.title}</p>
-                  <p className="mt-0.5 text-xs text-white/40">{event.barName} · {event.time}</p>
+                  <p className="mt-0.5 text-xs text-white/40">{event.barName} · {event.date}</p>
                 </div>
                 <span className={`text-xs font-medium ${event.price === "Free" ? "text-emerald-400" : "text-violet-300"}`}>{event.price}</span>
               </div>

@@ -6,17 +6,21 @@ const CATEGORIES = ['party', 'sport', 'hobby', 'culture']
 const EMOJIS = ['🎵','🍺','🎤','⚽','🏀','🎭','🎨','🍕','🍜','🥩','🎉','🎶']
 const COLORS = ['#e8eaf6','#e3f2fd','#ede7f6','#e8f5e9','#fff3e0','#fbe9e7']
 
+const EMPTY_EVENT = {
+  name: '', venue: '', description: '', date: '', time: '',
+  price: 'Free', category: 'party', badge: '', emoji: '🎵', color: '#e8eaf6',
+  bar_id: null
+}
+
 export default function AdminPage({ onBack }) {
   const [tab, setTab] = useState('events')
   const [events, setEvents] = useState([])
   const [restaurants, setRestaurants] = useState([])
+  const [bars, setBars] = useState([])
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState('')
 
-  const [event, setEvent] = useState({
-    name: '', venue: '', description: '', date: '', time: '',
-    price: 'Free', category: 'party', badge: '', emoji: '🎵', color: '#e8eaf6'
-  })
+  const [event, setEvent] = useState(EMPTY_EVENT)
 
   const [resto, setResto] = useState({
     name: '', cuisine: '', description: '', rating: 4.0,
@@ -26,17 +30,36 @@ export default function AdminPage({ onBack }) {
   useEffect(() => { fetchData() }, [])
 
   const fetchData = async () => {
-    const { data: ev } = await supabase.from('events').select('*').order('created_at', { ascending: false })
-    const { data: re } = await supabase.from('restaurants').select('*').order('created_at', { ascending: false })
+    const [{ data: ev }, { data: re }, { data: br }] = await Promise.all([
+      supabase.from('events').select('*').order('created_at', { ascending: false }),
+      supabase.from('restaurants').select('*').order('created_at', { ascending: false }),
+      supabase.from('bars').select('*').order('name'),
+    ])
     if (ev) setEvents(ev)
     if (re) setRestaurants(re)
+    if (br) setBars(br)
+  }
+
+  const handleBarChange = (barId) => {
+    const bar = bars.find(b => b.id === barId)
+    setEvent(prev => ({
+      ...prev,
+      bar_id: barId || null,
+      venue: bar ? bar.name : prev.venue,
+    }))
   }
 
   const submitEvent = async () => {
     setLoading(true)
-    const { error } = await supabase.from('events').insert([event])
+    const { bar_id, ...rest } = event
+    const payload = { ...rest, ...(bar_id ? { bar_id } : {}) }
+    const { error } = await supabase.from('events').insert([payload])
     if (error) alert(error.message)
-    else { setSuccess('Event created!'); fetchData(); setEvent({ name:'',venue:'',description:'',date:'',time:'',price:'Free',category:'party',badge:'',emoji:'🎵',color:'#e8eaf6' }) }
+    else {
+      setSuccess('Event published!')
+      fetchData()
+      setEvent(EMPTY_EVENT)
+    }
     setLoading(false)
     setTimeout(() => setSuccess(''), 3000)
   }
@@ -46,7 +69,11 @@ export default function AdminPage({ onBack }) {
     const restoData = { ...resto, tags: resto.tags.split(',').map(t => t.trim()).filter(Boolean) }
     const { error } = await supabase.from('restaurants').insert([restoData])
     if (error) alert(error.message)
-    else { setSuccess('Restaurant added!'); fetchData(); setResto({ name:'',cuisine:'',description:'',rating:4.0,distance:'',hours:'',emoji:'🍕',color:'#fff3e0',tags:'' }) }
+    else {
+      setSuccess('Restaurant added!')
+      fetchData()
+      setResto({ name:'',cuisine:'',description:'',rating:4.0,distance:'',hours:'',emoji:'🍕',color:'#fff3e0',tags:'' })
+    }
     setLoading(false)
     setTimeout(() => setSuccess(''), 3000)
   }
@@ -80,8 +107,20 @@ export default function AdminPage({ onBack }) {
         <div className={styles.content}>
           <div className={styles.formCard}>
             <div className={styles.formTitle}>Add new event</div>
+
+            <select
+              className={styles.select}
+              value={event.bar_id || ''}
+              onChange={e => handleBarChange(e.target.value)}
+            >
+              <option value="">No specific bar (or fill venue manually)</option>
+              {bars.map(b => (
+                <option key={b.id} value={b.id}>{b.emoji} {b.name}</option>
+              ))}
+            </select>
+
             <input className={styles.input} placeholder="Event name *" value={event.name} onChange={e=>setEvent({...event,name:e.target.value})} />
-            <input className={styles.input} placeholder="Venue (bar, club...) *" value={event.venue} onChange={e=>setEvent({...event,venue:e.target.value})} />
+            <input className={styles.input} placeholder="Venue (bar, club...)" value={event.venue} onChange={e=>setEvent({...event,venue:e.target.value})} />
             <textarea className={styles.textarea} placeholder="Description" value={event.description} onChange={e=>setEvent({...event,description:e.target.value})} />
             <div className={styles.row}>
               <input className={styles.input} type="date" value={event.date} onChange={e=>setEvent({...event,date:e.target.value})} />
@@ -110,7 +149,7 @@ export default function AdminPage({ onBack }) {
                   style={{background:c}} onClick={()=>setEvent({...event,color:c})}/>
               ))}
             </div>
-            <button className={styles.btnSubmit} onClick={submitEvent} disabled={loading||!event.name||!event.venue||!event.date}>
+            <button className={styles.btnSubmit} onClick={submitEvent} disabled={loading||!event.name||!event.date}>
               {loading ? 'Adding...' : '+ Publish event'}
             </button>
           </div>
