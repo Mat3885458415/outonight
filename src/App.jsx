@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Bell, Compass, Home, MapPin, Navigation, Search, Settings, Share2, Sparkles, Star, User, X, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./lib/supabase";
+import AdminPage from "./pages/AdminPage";
 
 // ─── Gradient map by category ─────────────────────────────────────────────────
 
@@ -196,6 +197,9 @@ export default function OutonightApp() {
                 />
               )}
               {route.tab === "map" && <MapScreen events={events} openEvent={openEvent} />}
+              {route.tab === "admin" && (
+                <AdminPage onBack={() => navigate("profile")} />
+              )}
               {route.tab === "profile" && (
                 <ProfileScreen
                   profile={profile}
@@ -209,6 +213,7 @@ export default function OutonightApp() {
                   markAllRead={markAllRead}
                   joinedCount={joined.length}
                   joinedEvents={events.filter((e) => joined.includes(e.id))}
+                  onAdmin={() => navigate("admin")}
                 />
               )}
             </motion.div>
@@ -741,7 +746,7 @@ function MapScreen({ events, openEvent }) {
 
 // ─── ProfileScreen ────────────────────────────────────────────────────────────
 
-function ProfileScreen({ profile, draft, setDraft, editOpen, setEditOpen, saveProfile, notifications, markRead, markAllRead, joinedCount, joinedEvents }) {
+function ProfileScreen({ profile, draft, setDraft, editOpen, setEditOpen, saveProfile, notifications, markRead, markAllRead, joinedCount, joinedEvents, onAdmin }) {
   const [notifTab, setNotifTab] = useState("all");
   const unread = notifications.filter((n) => !n.read);
   const visibleNotifs = notifTab === "unread" ? unread : notifications;
@@ -760,9 +765,10 @@ function ProfileScreen({ profile, draft, setDraft, editOpen, setEditOpen, savePr
                 <p className="mt-0.5 text-sm text-white/50">{profile.bio}</p>
               </div>
             </div>
-            <button onClick={() => setEditOpen((v) => !v)} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80">
-              {editOpen ? "Close" : "Edit"}
-            </button>
+            <div className="flex gap-2">
+              <button onClick={onAdmin} className="rounded-2xl border border-violet-400/25 bg-violet-400/10 px-3 py-2 text-xs text-violet-300">+ Event</button>
+              <button onClick={() => setEditOpen((v) => !v)} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80">{editOpen ? "Close" : "Edit"}</button>
+            </div>
           </div>
           <div className="mt-4 rounded-[18px] border border-white/8 bg-white/[0.04] p-3 text-sm text-white/60">{profile.mood}</div>
         </div>
