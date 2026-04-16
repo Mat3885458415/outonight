@@ -681,11 +681,12 @@ function BarCard({ bar, joined, onToggleJoin, onOpenEvent, isExpanded, onToggleE
 
 function EventScreen({ event, isJoined, onJoin, user }) {
   const [attendees, setAttendees] = useState([]);
+  const [selectedProfile, setSelectedProfile] = useState(null);
 
   useEffect(() => {
     supabase
       .from("rsvp")
-      .select("user_id, profiles(full_name)")
+      .select("user_id, profiles(full_name, university, interests)")
       .eq("event_id", event.id)
       .then(({ data }) => { if (data) setAttendees(data); });
   }, [event.id, isJoined]);
@@ -740,17 +741,63 @@ function EventScreen({ event, isJoined, onJoin, user }) {
               const isMe = user && a.user_id === user.id;
               const colors = ["bg-violet-400/20 text-violet-300","bg-sky-400/20 text-sky-300","bg-emerald-400/20 text-emerald-300","bg-amber-400/20 text-amber-300","bg-pink-400/20 text-pink-300"];
               return (
-                <div key={a.user_id} className="flex items-center gap-3 rounded-[18px] border border-white/6 bg-white/[0.04] px-3 py-2.5">
+                <button key={a.user_id} onClick={() => setSelectedProfile({ ...a.profiles, user_id: a.user_id, isMe })} className="flex w-full items-center gap-3 rounded-[18px] border border-white/6 bg-white/[0.04] px-3 py-2.5 text-left transition hover:bg-white/[0.08] active:scale-[0.99]">
                   <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold ${colors[i % colors.length]}`}>
                     {name[0].toUpperCase()}
                   </div>
-                  <span className="text-sm text-white/80">{name}{isMe ? " (toi)" : ""}</span>
-                </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white/80">{name}{isMe ? " (toi)" : ""}</p>
+                    {a.profiles?.university && <p className="text-xs text-white/40 truncate">{a.profiles.university}</p>}
+                  </div>
+                  <ChevronRight size={14} className="shrink-0 text-white/25" />
+                </button>
               );
             })}
           </div>
         )}
       </section>
+
+      {selectedProfile && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={() => setSelectedProfile(null)}>
+          <motion.div
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="w-full max-w-md rounded-t-[32px] border border-white/10 bg-[#0F1018] p-6 pb-10"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <span className="text-xs uppercase tracking-[0.22em] text-white/35">Profile</span>
+              <button onClick={() => setSelectedProfile(null)} className="text-white/40 hover:text-white/70"><X size={18} /></button>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-violet-400/30 to-purple-600/30 text-2xl font-bold text-violet-300">
+                {(selectedProfile.full_name || "?")[0].toUpperCase()}
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">{selectedProfile.full_name || "Student"}</h3>
+                {selectedProfile.isMe && <span className="rounded-full bg-violet-400/15 px-2 py-0.5 text-[11px] text-violet-300">Vous</span>}
+              </div>
+            </div>
+            {selectedProfile.university && (
+              <div className="mt-4 flex items-center gap-2 rounded-2xl border border-white/8 bg-white/5 px-4 py-3">
+                <span className="text-base">🎓</span>
+                <span className="text-sm text-white/70">{selectedProfile.university}</span>
+              </div>
+            )}
+            {selectedProfile.interests && selectedProfile.interests.length > 0 && (
+              <div className="mt-3">
+                <p className="mb-2 text-xs text-white/35 uppercase tracking-[0.2em]">Interests</p>
+                <div className="flex flex-wrap gap-2">
+                  {selectedProfile.interests.map((interest, idx) => (
+                    <span key={idx} className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-white/65">{interest}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            <p className="mt-5 text-center text-xs text-white/25">Going to this event</p>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }
