@@ -27,13 +27,6 @@ function normalizeEvent(ev, barsMap, rsvpCountMap = {}) {
   };
 }
 
-// ─── Notifications (static for now) ──────────────────────────────────────────
-
-const NOTIFICATIONS_DATA = [
-  { id: 1, type: "Friends", icon: Sparkles, text: "3 friends are going to an event tonight", time: "Now", read: false },
-  { id: 2, type: "Event",   icon: Star,     text: "Check out tonight's events in Zlín", time: "1 h ago", read: false },
-  { id: 3, type: "Offer",   icon: Bell,     text: "Happy Hour — special deals tonight", time: "3 h ago", read: true },
-];
 
 const TABS = [
   { id: "home",    label: "Home",    icon: Home },
@@ -68,7 +61,6 @@ export default function OutonightApp() {
   const [restaurants, setRestaurants] = useState([]);
   const [myRestoPlans, setMyRestoPlans] = useState([]); // [{ restaurant_id, plan_date }]
   const [restoPlans, setRestoPlans]   = useState({}); // { "date": { restoId: count } }
-  const [notifications, setNotifications] = useState(NOTIFICATIONS_DATA);
   const [editOpen, setEditOpen]       = useState(false);
   const [toast, setToast]             = useState(null);
   const [profile, setProfile]         = useState({ name: "Matéo Dumont", bio: "TBU Zlín · Erasmus student", mood: "Looking for plans tonight" });
@@ -247,11 +239,7 @@ export default function OutonightApp() {
     }
   };
 
-  const markRead    = (id) => setNotifications((cur) => cur.map((n) => n.id === id ? { ...n, read: true } : n));
-  const markAllRead = ()   => setNotifications((cur) => cur.map((n) => ({ ...n, read: true })));
-  const saveProfile = ()   => { setProfile(draft); setEditOpen(false); showToast("Profile saved ✓"); };
-
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const saveProfile = () => { setProfile(draft); setEditOpen(false); showToast("Profile saved ✓"); };
 
   if (authLoading) {
     return (
@@ -344,9 +332,6 @@ export default function OutonightApp() {
                   editOpen={editOpen}
                   setEditOpen={setEditOpen}
                   saveProfile={saveProfile}
-                  notifications={notifications}
-                  markRead={markRead}
-                  markAllRead={markAllRead}
                   joinedCount={joined.length}
                   joinedEvents={events.filter((e) => joined.includes(e.id))}
                   onAdmin={() => navigate("admin")}
@@ -365,7 +350,7 @@ export default function OutonightApp() {
             {TABS.map((tab) => {
               const Icon  = tab.icon;
               const active = route.tab === tab.id || (tab.id === "home" && route.tab === "event");
-              const badge  = tab.id === "profile" && unreadCount > 0;
+              const badge  = false;
               return (
                 <button key={tab.id} onClick={() => navigate(tab.id)} className={`relative flex flex-col items-center gap-1 rounded-2xl px-2 py-2 transition ${active ? "bg-white text-[#0B0C11]" : "bg-white/5 text-white/60 hover:bg-white/10"}`}>
                   <Icon size={18} />
@@ -1227,7 +1212,7 @@ function MapScreen({ events, openEvent }) {
 
 // ─── ProfileScreen ────────────────────────────────────────────────────────────
 
-function ProfileScreen({ profile, draft, setDraft, editOpen, setEditOpen, saveProfile, notifications, markRead, markAllRead, joinedCount, joinedEvents, onAdmin, user, isAdmin, onLogout }) {
+function ProfileScreen({ profile, draft, setDraft, editOpen, setEditOpen, saveProfile, joinedCount, joinedEvents, onAdmin, user, isAdmin, onLogout }) {
 
   return (
     <div className="space-y-4">
