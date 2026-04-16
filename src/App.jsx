@@ -429,25 +429,28 @@ function HomeScreen({ events, bars, unboundEvents, joined, openEvent, toggleJoin
           <SectionHeader title="Bars" action="See all" onAction={() => navigate("explore")} />
           <div className="-mx-1 mt-3 flex gap-3 overflow-x-auto px-1 pb-2" style={{ scrollbarWidth: "none" }}>
             {bars.map((bar, i) => (
-              <motion.div
+              <motion.a
                 key={bar.id}
+                href={`https://maps.google.com/?q=${encodeURIComponent(bar.address || bar.name + ' Zlín')}`}
+                target="_blank"
+                rel="noopener noreferrer"
                 initial={{ opacity: 0, x: 12 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.06 }}
-                className="w-40 shrink-0 overflow-hidden rounded-[22px] border border-white/8 bg-white/5"
+                className="w-40 shrink-0 overflow-hidden rounded-[22px] border border-white/8 bg-white/5 block"
               >
                 <div className={`flex h-20 items-center justify-center bg-gradient-to-br ${bar.gradient || "from-violet-500/20 to-indigo-500/20"} text-4xl`}>{bar.emoji}</div>
                 <div className="p-3">
                   <p className="truncate text-sm font-semibold">{bar.name}</p>
                   <p className="mt-0.5 text-xs text-white/45">{bar.tag}</p>
-                  <div className="mt-2 flex items-center justify-between">
-                    <span className="text-xs text-white/35">{bar.distance}</span>
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] ${bar.open ? "bg-emerald-500/15 text-emerald-400" : "bg-white/8 text-white/35"}`}>
+                  <div className="mt-2 flex items-center justify-between gap-1">
+                    <span className="truncate text-[10px] text-white/35">{bar.address ? bar.address.split(',')[0] : bar.distance}</span>
+                    <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] ${bar.open ? "bg-emerald-500/15 text-emerald-400" : "bg-white/8 text-white/35"}`}>
                       {bar.open ? "Open" : "Closed"}
                     </span>
                   </div>
                 </div>
-              </motion.div>
+              </motion.a>
             ))}
           </div>
         </section>
@@ -592,7 +595,6 @@ function BarCard({ bar, joined, onToggleJoin, onOpenEvent, isExpanded, onToggleE
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-white/60">{bar.distance}</span>
             <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${bar.open ? "bg-emerald-500/20 text-emerald-300" : "bg-white/10 text-white/40"}`}>
               {bar.open ? "Open" : "Closed"}
             </span>
@@ -603,6 +605,17 @@ function BarCard({ bar, joined, onToggleJoin, onOpenEvent, isExpanded, onToggleE
       {/* Bar description + toggle */}
       <div className="p-4">
         <p className="text-sm text-white/60 leading-5">{bar.description}</p>
+        {bar.address && (
+          <a
+            href={`https://maps.google.com/?q=${encodeURIComponent(bar.address)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 flex items-center gap-2 text-xs text-violet-300/80 hover:text-violet-300 transition"
+          >
+            <MapPin size={12} />
+            {bar.address}
+          </a>
+        )}
 
         {bar.events.length > 0 ? (
           <button
