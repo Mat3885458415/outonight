@@ -58,6 +58,7 @@ export default function OutonightApp() {
   const [joined, setJoined]           = useState([]);
   const [myPlans, setMyPlans]         = useState([]); // [{ bar_id, plan_date }]
   const [barPlans, setBarPlans]       = useState({}); // { "date": { barId: count } }
+  const [barPlanUsers, setBarPlanUsers] = useState({}); // { "date": { barId: [{ user_id, full_name }] } }
   const [restaurants, setRestaurants] = useState([]);
   const [myRestoPlans, setMyRestoPlans] = useState([]); // [{ restaurant_id, plan_date }]
   const [restoPlans, setRestoPlans]   = useState({}); // { "date": { restoId: count } }
@@ -100,7 +101,7 @@ export default function OutonightApp() {
         supabase.from("bars").select("*").order("name"),
         supabase.from("events").select("*").order("date", { ascending: true }),
         supabase.from("rsvp").select("event_id, user_id"),
-        supabase.from("bar_plans").select("bar_id, user_id, plan_date"),
+        supabase.from("bar_plans").select("bar_id, user_id, plan_date, profiles(full_name, university)"),
         supabase.from("restaurants").select("*").order("name"),
         supabase.from("resto_plans").select("restaurant_id, user_id, plan_date"),
       ]);
@@ -114,12 +115,22 @@ export default function OutonightApp() {
       }
 
       if (plansData) {
-        const map = {};
+        const countMap = {};
+        const usersMap = {};
         plansData.forEach(p => {
-          if (!map[p.plan_date]) map[p.plan_date] = {};
-          map[p.plan_date][p.bar_id] = (map[p.plan_date][p.bar_id] || 0) + 1;
+          if (!countMap[p.plan_date]) countMap[p.plan_date] = {};
+          countMap[p.plan_date][p.bar_id] = (countMap[p.plan_date][p.bar_id] || 0) + 1;
+
+          if (!usersMap[p.plan_date]) usersMap[p.plan_date] = {};
+          if (!usersMap[p.plan_date][p.bar_id]) usersMap[p.plan_date][p.bar_id] = [];
+          usersMap[p.plan_date][p.bar_id].push({
+            user_id:    p.user_id,
+            full_name:  p.profiles?.full_name || null,
+            university: p.profiles?.university || null,
+          });
         });
-        setBarPlans(map);
+        setBarPlans(countMap);
+        setBarPlanUsers(usersMap);
         if (cu) setMyPlans(plansData.filter(p => p.user_id === cu.id).map(p => ({ bar_id: p.bar_id, plan_date: p.plan_date })));
       }
 
@@ -222,6 +233,7 @@ export default function OutonightApp() {
     if (!user) return;
     const has = myPlans.some(p => p.bar_id === barId && p.plan_date === date);
     const bar = bars.find(b => b.id === barId);
+    const myName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || null;
     setMyPlans(cur => has
       ? cur.filter(p => !(p.bar_id === barId && p.plan_date === date))
       : [...cur, { bar_id: barId, plan_date: date }]
@@ -230,6 +242,13 @@ export default function OutonightApp() {
       const day = { ...(cur[date] || {}) };
       day[barId] = Math.max(0, (day[barId] || 0) + (has ? -1 : 1));
       return { ...cur, [date]: day };
+    });
+    setBarPlanUsers(cur => {
+      const existing = cur[date]?.[barId] || [];
+      const updated = has
+        ? existing.filter(u => u.user_id !== user.id)
+        : [...existing, { user_id: user.id, full_name: myName }];
+      return { ...cur, [date]: { ...(cur[date] || {}), [barId]: updated } };
     });
     showToast(has ? `Removed from plans` : `Added ${bar?.name} to your plans! 🗓️`);
     if (has) {
@@ -297,10 +316,12 @@ export default function OutonightApp() {
                   navigate={navigate}
                   myPlans={myPlans}
                   barPlans={barPlans}
+                  barPlanUsers={barPlanUsers}
                   toggleBarPlan={toggleBarPlan}
                   myRestoPlans={myRestoPlans}
                   restoPlans={restoPlans}
                   toggleRestoPlan={toggleRestoPlan}
+                  currentUserId={user?.id}
                 />
               )}
               {route.tab === "explore" && (
@@ -424,7 +445,7 @@ function buildWeekDays() {
 
 const WEEK_DAYS = buildWeekDays();
 
-function HomeScreen({ events, bars, restaurants, joined, openEvent, toggleJoin, navigate, myPlans, barPlans, toggleBarPlan, myRestoPlans, restoPlans, toggleRestoPlan }) {
+function HomeScreen({ events, bars, restaurants, joined, openEvent, toggleJoin, navigate, myPlans, barPlans, barPlanUsers, toggleBarPlan, myRestoPlans, restoPlans, toggleRestoPlan, currentUserId }) {
   const specialEvents = events.filter(e => e.is_special);
   const regularEvents = events.filter(e => !e.is_special);
   const hero = regularEvents[0] ?? null;
@@ -528,7 +549,7 @@ function HomeScreen({ events, bars, restaurants, joined, openEvent, toggleJoin, 
           <SectionHeader title="Bars" action="See all" onAction={() => navigate("explore")} />
           <div className="mt-3 space-y-2">
             {bars.map(bar => (
-              <CollapsibleBarCard key={bar.id} bar={bar} barPlans={barPlans} myPlans={myPlans} toggleBarPlan={toggleBarPlan} />
+              <CollapsibleBarCard key={bar.id} bar={bar} barPlans={barPlans} barPlanUsers={barPlanUsers} myPlans={myPlans} toggleBarPlan={toggleBarPlan} currentUserId={currentUserId} />
             ))}
           </div>
         </section>
@@ -551,13 +572,14 @@ function HomeScreen({ events, bars, restaurants, joined, openEvent, toggleJoin, 
 
 // ─── CollapsibleBarCard ───────────────────────────────────────────────────────
 
-function CollapsibleBarCard({ bar, barPlans, myPlans, toggleBarPlan }) {
+function CollapsibleBarCard({ bar, barPlans, barPlanUsers, myPlans, toggleBarPlan, currentUserId }) {
   const [open, setOpen] = useState(false);
   const [planDay, setPlanDay] = useState(WEEK_DAYS[0].iso);
 
   const totalWeek = WEEK_DAYS.reduce((s, d) => s + (barPlans[d.iso]?.[bar.id] || 0), 0);
   const dayCount  = barPlans[planDay]?.[bar.id] || 0;
   const isMe      = myPlans.some(p => p.bar_id === bar.id && p.plan_date === planDay);
+  const dayUsers  = barPlanUsers?.[planDay]?.[bar.id] || [];
 
   return (
     <div className={`overflow-hidden rounded-[22px] border transition ${open ? "border-violet-400/25 bg-white/[0.06]" : "border-white/8 bg-white/5"}`}>
@@ -613,7 +635,7 @@ function CollapsibleBarCard({ bar, barPlans, myPlans, toggleBarPlan }) {
               {/* Status + button */}
               <div className="mt-3 flex items-center justify-between gap-3">
                 <p className="text-xs text-white/50">
-                  {dayCount > 0 ? `${dayCount} people going` : "No one yet"}
+                  {dayCount > 0 ? `${dayCount} going` : "No one yet"}
                   {bar.address && (
                     <a href={`https://maps.google.com/?q=${encodeURIComponent(bar.address)}`} target="_blank" rel="noopener noreferrer" className="ml-2 text-violet-300/70">· {bar.address.split(',')[0]}</a>
                   )}
@@ -625,6 +647,46 @@ function CollapsibleBarCard({ bar, barPlans, myPlans, toggleBarPlan }) {
                   {isMe ? "✓ I'm in" : "I'm in"}
                 </button>
               </div>
+
+              {/* Who's going this day */}
+              {dayUsers.length > 0 && (
+                <div className="mt-3">
+                  <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-white/30">Who's going</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {dayUsers.slice(0, 6).map((u, i) => {
+                      const name = u.full_name || "?";
+                      const isCurrentUser = u.user_id === currentUserId;
+                      const colors = [
+                        "bg-violet-400/20 text-violet-300",
+                        "bg-sky-400/20 text-sky-300",
+                        "bg-emerald-400/20 text-emerald-300",
+                        "bg-amber-400/20 text-amber-300",
+                        "bg-pink-400/20 text-pink-300",
+                        "bg-cyan-400/20 text-cyan-300",
+                      ];
+                      return (
+                        <div
+                          key={u.user_id}
+                          className="flex items-center gap-1.5 rounded-full border border-white/8 bg-white/[0.06] px-2.5 py-1"
+                          title={name}
+                        >
+                          <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${colors[i % colors.length]}`}>
+                            {name[0].toUpperCase()}
+                          </div>
+                          <span className="text-[11px] text-white/65">
+                            {isCurrentUser ? "You" : name.split(" ")[0]}
+                          </span>
+                        </div>
+                      );
+                    })}
+                    {dayUsers.length > 6 && (
+                      <div className="flex items-center rounded-full border border-white/8 bg-white/[0.06] px-2.5 py-1">
+                        <span className="text-[11px] text-white/40">+{dayUsers.length - 6} more</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
