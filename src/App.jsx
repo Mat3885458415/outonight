@@ -1305,7 +1305,6 @@ function ProfileScreen({ profile, draft, setDraft, editOpen, setEditOpen, savePr
             <div className="flex gap-2">
               {isAdmin && <button onClick={onAdmin} className="rounded-2xl border border-violet-400/25 bg-violet-400/10 px-3 py-2 text-xs text-violet-300">+ Event</button>}
               <button onClick={() => setEditOpen((v) => !v)} className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/80">{editOpen ? "Close" : "Edit"}</button>
-              <button onClick={onLogout} className="rounded-2xl border border-red-400/20 bg-red-400/10 px-3 py-2 text-xs text-red-400">Out</button>
             </div>
           </div>
           <div className="mt-4 rounded-[18px] border border-white/8 bg-white/[0.04] p-3 text-sm text-white/60">{profile.mood}</div>
@@ -1361,6 +1360,14 @@ function ProfileScreen({ profile, draft, setDraft, editOpen, setEditOpen, savePr
           </div>
         </section>
       )}
+
+      {/* Log out */}
+      <button
+        onClick={onLogout}
+        className="w-full rounded-2xl border border-red-500/20 bg-red-500/8 py-4 text-sm font-semibold text-red-400 transition active:scale-[0.98] active:bg-red-500/15"
+      >
+        Log out
+      </button>
 
     </div>
   );
