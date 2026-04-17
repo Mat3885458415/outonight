@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="40%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#3D1F8C"/>
+      <stop offset="100%" stop-color="#0B0C11"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#7C4DFF" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#7C4DFF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="120" fill="url(#bg)"/>
+  <circle cx="256" cy="256" r="200" fill="url(#glow)"/>
+  <!-- Moon shape -->
+  <circle cx="256" cy="246" r="110" fill="#C4B5FD"/>
+  <circle cx="306" cy="216" r="88" fill="#1A1040"/>
+  <!-- Stars -->
+  <circle cx="160" cy="155" r="6" fill="#E9D5FF" opacity="0.9"/>
+  <circle cx="370" cy="175" r="4" fill="#E9D5FF" opacity="0.7"/>
+  <circle cx="140" cy="330" r="4" fill="#E9D5FF" opacity="0.6"/>
+  <circle cx="390" cy="310" r="5" fill="#E9D5FF" opacity="0.8"/>
+  <circle cx="320" cy="390" r="3" fill="#E9D5FF" opacity="0.5"/>
+</svg>
