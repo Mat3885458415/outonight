@@ -128,7 +128,7 @@ export default function OutonightApp() {
         const profilesMap = {};
         const uniqueUserIds = [...new Set(plansData.map(p => p.user_id))];
         if (uniqueUserIds.length > 0) {
-          const { data: profilesData } = await supabase.from("profiles").select("id, full_name, university").in("id", uniqueUserIds);
+          const { data: profilesData } = await supabase.from("profiles").select("id, full_name, university, avatar_url, bio").in("id", uniqueUserIds);
           if (profilesData) profilesData.forEach(p => { profilesMap[p.id] = p; });
         }
 
@@ -146,6 +146,8 @@ export default function OutonightApp() {
             user_id:    p.user_id,
             full_name:  profile?.full_name || null,
             university: profile?.university || null,
+            avatar_url: profile?.avatar_url || null,
+            bio:        profile?.bio || null,
           });
         });
         setBarPlans(countMap);
@@ -606,10 +608,39 @@ function HomeScreen({ events, bars, restaurants, joined, openEvent, toggleJoin, 
 
 // ─── CollapsibleBarCard ───────────────────────────────────────────────────────
 
+function ProfileModal({ user, onClose }) {
+  const initials = (user.full_name || "?")[0].toUpperCase();
+  return (
+    <>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <motion.div initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
+        transition={{ type: "spring", damping: 32, stiffness: 320 }}
+        className="fixed bottom-0 left-0 right-0 z-50 mx-auto max-w-md rounded-t-[32px] border-t border-white/10 bg-[#0D0E1A] pb-10"
+      >
+        <div className="flex justify-center pt-3 pb-4">
+          <div className="h-1 w-10 rounded-full bg-white/20" />
+        </div>
+        <div className="flex flex-col items-center px-6 pb-2">
+          {user.avatar_url ? (
+            <img src={user.avatar_url} alt="avatar" className="h-20 w-20 rounded-full border-4 border-white/10 object-cover" />
+          ) : (
+            <div className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-white/10 bg-gradient-to-br from-violet-400 to-purple-600 text-3xl font-bold text-white">{initials}</div>
+          )}
+          <h2 className="mt-4 text-xl font-bold">{user.full_name || "Student"}</h2>
+          {user.bio && <p className="mt-1 text-sm text-violet-300/80">{user.bio}</p>}
+          {user.university && <p className="mt-1 text-xs text-white/40">{user.university}</p>}
+        </div>
+      </motion.div>
+    </>
+  );
+}
+
 function CollapsibleBarCard({ bar, barPlans, barPlanUsers, myPlans, toggleBarPlan, currentUserId }) {
   const weekDays  = useMemo(() => buildWeekDays(), []);
   const [open, setOpen] = useState(false);
   const [planDay, setPlanDay] = useState(weekDays[0].iso);
+  const [selectedProfile, setSelectedProfile] = useState(null);
 
   const totalWeek = weekDays.reduce((s, d) => s + (barPlans[d.iso]?.[bar.id] || 0), 0);
   const dayCount  = barPlans[planDay]?.[bar.id] || 0;
@@ -700,18 +731,22 @@ function CollapsibleBarCard({ bar, barPlans, barPlanUsers, myPlans, toggleBarPla
                         "bg-cyan-400/20 text-cyan-300",
                       ];
                       return (
-                        <div
+                        <button
                           key={u.user_id}
-                          className="flex items-center gap-1.5 rounded-full border border-white/8 bg-white/[0.06] px-2.5 py-1"
-                          title={name}
+                          onClick={() => setSelectedProfile(u)}
+                          className="flex items-center gap-1.5 rounded-full border border-white/8 bg-white/[0.06] px-2.5 py-1 transition active:scale-95 active:bg-white/10"
                         >
-                          <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${colors[i % colors.length]}`}>
-                            {name[0].toUpperCase()}
-                          </div>
+                          {u.avatar_url ? (
+                            <img src={u.avatar_url} className="h-5 w-5 shrink-0 rounded-full object-cover" />
+                          ) : (
+                            <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold ${colors[i % colors.length]}`}>
+                              {name[0].toUpperCase()}
+                            </div>
+                          )}
                           <span className="text-[11px] text-white/65">
                             {isCurrentUser ? "You" : name.split(" ")[0]}
                           </span>
-                        </div>
+                        </button>
                       );
                     })}
                     {dayUsers.length > 6 && (
@@ -724,6 +759,13 @@ function CollapsibleBarCard({ bar, barPlans, barPlanUsers, myPlans, toggleBarPla
               )}
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Profile modal */}
+      <AnimatePresence>
+        {selectedProfile && (
+          <ProfileModal user={selectedProfile} onClose={() => setSelectedProfile(null)} />
         )}
       </AnimatePresence>
     </div>
