@@ -402,7 +402,7 @@ export default function OutonightApp() {
 
         {/* Bottom nav */}
         <div className="fixed bottom-0 left-0 right-0 z-40 mx-auto max-w-md border-t border-white/8 bg-[#0B0C11]/90 px-3 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 backdrop-blur-2xl">
-          <nav className="grid grid-cols-4 gap-2">
+          <nav className="grid grid-cols-3 gap-2">
             {TABS.map((tab) => {
               const Icon  = tab.icon;
               const active = route.tab === tab.id || (tab.id === "home" && route.tab === "event");
