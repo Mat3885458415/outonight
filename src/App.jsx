@@ -84,11 +84,12 @@ export default function OutonightApp() {
   }, []);
 
   const loadProfile = async (u) => {
-    const { data } = await supabase.from("profiles").select("full_name, avatar_url").eq("id", u.id).single();
+    const { data } = await supabase.from("profiles").select("full_name, avatar_url, bio").eq("id", u.id).single();
     const name = data?.full_name || u.user_metadata?.full_name || u.email?.split("@")[0] || "";
     const avatarUrl = data?.avatar_url || null;
-    setProfile(p => ({ ...p, name, avatarUrl }));
-    setDraft(p => ({ ...p, name, avatarUrl }));
+    const bio = data?.bio || "UTB · Erasmus · Full-time student";
+    setProfile(p => ({ ...p, name, avatarUrl, bio }));
+    setDraft(p => ({ ...p, name, avatarUrl, bio }));
   };
 
   const checkAdmin = async (userId) => {
@@ -287,7 +288,7 @@ export default function OutonightApp() {
       avatarUrl = `${publicUrl}?t=${Date.now()}`;
     }
     if (user) {
-      await supabase.from("profiles").upsert({ id: user.id, full_name: newDraft.name, avatar_url: avatarUrl });
+      await supabase.from("profiles").upsert({ id: user.id, full_name: newDraft.name, avatar_url: avatarUrl, bio: newDraft.bio });
     }
     const updated = { ...newDraft, avatarUrl };
     setProfile(updated);
@@ -1366,7 +1367,8 @@ function ProfileScreen({ profile, draft, setDraft, editOpen, setEditOpen, savePr
               </div>
               <div>
                 <h2 className="text-lg font-semibold">{profile.name || user?.email?.split("@")[0]}</h2>
-                <p className="mt-0.5 text-sm text-white/50">{user?.email}</p>
+                <p className="mt-0.5 text-xs text-violet-300/80">{profile.bio}</p>
+                <p className="mt-0.5 text-xs text-white/35">{user?.email}</p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -1402,6 +1404,7 @@ function ProfileScreen({ profile, draft, setDraft, editOpen, setEditOpen, savePr
                   {avatarPreview ? "Photo selected ✓" : "Change profile photo"}
                 </button>
                 <Input label="Name" value={draft.name} onChange={(v) => setDraft({ ...draft, name: v })} />
+                <Input label="Bio" value={draft.bio} onChange={(v) => setDraft({ ...draft, bio: v })} />
                 <Input label="Status" value={draft.mood} onChange={(v) => setDraft({ ...draft, mood: v })} />
                 <div className="grid grid-cols-2 gap-3">
                   <button onClick={handleSave} disabled={saving} className="rounded-2xl bg-white py-3 text-sm font-semibold text-[#0B0C11] disabled:opacity-60">
