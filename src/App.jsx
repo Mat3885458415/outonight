@@ -64,7 +64,7 @@ export default function OutonightApp() {
   const [restoPlans, setRestoPlans]   = useState({}); // { "date": { restoId: count } }
   const [editOpen, setEditOpen]       = useState(false);
   const [toast, setToast]             = useState(null);
-  const [profile, setProfile]         = useState({ name: "Matéo Dumont", bio: "TBU Zlín · Erasmus student", mood: "Looking for plans tonight" });
+  const [profile, setProfile]         = useState({ name: "", bio: "TBU Zlín · Erasmus student", mood: "Looking for plans tonight", avatarUrl: null });
   const [draft, setDraft]             = useState(profile);
   const toastRef = useRef(null);
 
@@ -73,15 +73,23 @@ export default function OutonightApp() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setAuthLoading(false);
-      if (session?.user) checkAdmin(session.user.id);
+      if (session?.user) { checkAdmin(session.user.id); loadProfile(session.user); }
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
-      if (session?.user) checkAdmin(session.user.id);
+      if (session?.user) { checkAdmin(session.user.id); loadProfile(session.user); }
       else setIsAdmin(false);
     });
     return () => subscription.unsubscribe();
   }, []);
+
+  const loadProfile = async (u) => {
+    const { data } = await supabase.from("profiles").select("full_name, avatar_url").eq("id", u.id).single();
+    const name = data?.full_name || u.user_metadata?.full_name || u.email?.split("@")[0] || "";
+    const avatarUrl = data?.avatar_url || null;
+    setProfile(p => ({ ...p, name, avatarUrl }));
+    setDraft(p => ({ ...p, name, avatarUrl }));
+  };
 
   const checkAdmin = async (userId) => {
     const { data } = await supabase.from("admins").select("id").eq("user_id", userId).single();
@@ -269,7 +277,24 @@ export default function OutonightApp() {
     }
   };
 
-  const saveProfile = () => { setProfile(draft); setEditOpen(false); showToast("Profile saved ✓"); };
+  const saveProfile = async (newDraft, avatarFile = null) => {
+    let avatarUrl = newDraft.avatarUrl;
+    if (avatarFile && user) {
+      const ext = avatarFile.name.split('.').pop();
+      const path = `${user.id}/avatar.${ext}`;
+      await supabase.storage.from("avatars").upload(path, avatarFile, { upsert: true });
+      const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
+      avatarUrl = `${publicUrl}?t=${Date.now()}`;
+    }
+    if (user) {
+      await supabase.from("profiles").upsert({ id: user.id, full_name: newDraft.name, avatar_url: avatarUrl });
+    }
+    const updated = { ...newDraft, avatarUrl };
+    setProfile(updated);
+    setDraft(updated);
+    setEditOpen(false);
+    showToast("Profile saved ✓");
+  };
 
   if (authLoading) {
     return (
@@ -1287,6 +1312,35 @@ function MapScreen({ events, openEvent }) {
 // ─── ProfileScreen ────────────────────────────────────────────────────────────
 
 function ProfileScreen({ profile, draft, setDraft, editOpen, setEditOpen, saveProfile, joinedCount, joinedEvents, onAdmin, user, isAdmin, onLogout }) {
+  const [avatarFile, setAvatarFile]       = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [saving, setSaving]               = useState(false);
+  const fileInputRef                      = useRef(null);
+
+  const displayAvatar = avatarPreview || profile.avatarUrl;
+  const initials = (profile.name || user?.email || "?")[0].toUpperCase();
+
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    await saveProfile(draft, avatarFile);
+    setAvatarFile(null);
+    setAvatarPreview(null);
+    setSaving(false);
+  };
+
+  const handleCancel = () => {
+    setEditOpen(false);
+    setAvatarFile(null);
+    setAvatarPreview(null);
+    setDraft(profile);
+  };
 
   return (
     <div className="space-y-4">
@@ -1296,10 +1350,23 @@ function ProfileScreen({ profile, draft, setDraft, editOpen, setEditOpen, savePr
         <div className="px-5 pb-5">
           <div className="-mt-10 flex items-end justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-[#0B0C11] bg-gradient-to-br from-violet-400 to-purple-600 text-3xl font-semibold text-white">M</div>
+              {/* Avatar */}
+              <div className="relative h-20 w-20 shrink-0">
+                {displayAvatar ? (
+                  <img src={displayAvatar} alt="avatar" className="h-20 w-20 rounded-full border-4 border-[#0B0C11] object-cover" />
+                ) : (
+                  <div className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-[#0B0C11] bg-gradient-to-br from-violet-400 to-purple-600 text-3xl font-semibold text-white">{initials}</div>
+                )}
+                {editOpen && (
+                  <button onClick={() => fileInputRef.current?.click()} className="absolute bottom-0 right-0 flex h-7 w-7 items-center justify-center rounded-full border border-white/20 bg-[#1A1B26] text-xs shadow-lg">
+                    📷
+                  </button>
+                )}
+                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+              </div>
               <div>
-                <h2 className="text-lg font-semibold">{user?.user_metadata?.full_name || user?.email?.split("@")[0] || profile.name}</h2>
-                <p className="mt-0.5 text-sm text-white/50">{user?.email || profile.bio}</p>
+                <h2 className="text-lg font-semibold">{profile.name || user?.email?.split("@")[0]}</h2>
+                <p className="mt-0.5 text-sm text-white/50">{user?.email}</p>
               </div>
             </div>
             <div className="flex gap-2">
@@ -1329,12 +1396,18 @@ function ProfileScreen({ profile, draft, setDraft, editOpen, setEditOpen, savePr
             <div className="p-4">
               <SectionHeader title="Edit profile" icon={Settings} />
               <div className="mt-4 space-y-3">
+                {/* Avatar picker hint */}
+                <button onClick={() => fileInputRef.current?.click()} className="flex w-full items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white/60 transition active:bg-white/10">
+                  <span className="text-lg">📷</span>
+                  {avatarPreview ? "Photo selected ✓" : "Change profile photo"}
+                </button>
                 <Input label="Name" value={draft.name} onChange={(v) => setDraft({ ...draft, name: v })} />
-                <Input label="Bio" value={draft.bio} onChange={(v) => setDraft({ ...draft, bio: v })} />
                 <Input label="Status" value={draft.mood} onChange={(v) => setDraft({ ...draft, mood: v })} />
                 <div className="grid grid-cols-2 gap-3">
-                  <button onClick={saveProfile} className="rounded-2xl bg-white py-3 text-sm font-semibold text-[#0B0C11]">Save</button>
-                  <button onClick={() => setEditOpen(false)} className="rounded-2xl border border-white/10 bg-white/5 py-3 text-sm text-white/80">Cancel</button>
+                  <button onClick={handleSave} disabled={saving} className="rounded-2xl bg-white py-3 text-sm font-semibold text-[#0B0C11] disabled:opacity-60">
+                    {saving ? "Saving..." : "Save"}
+                  </button>
+                  <button onClick={handleCancel} className="rounded-2xl border border-white/10 bg-white/5 py-3 text-sm text-white/80">Cancel</button>
                 </div>
               </div>
             </div>
