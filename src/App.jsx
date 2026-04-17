@@ -3,7 +3,7 @@ import { Compass, Home, MapPin, Navigation, Search, Settings, Share2, User, X, C
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./lib/supabase";
 import AdminPage from "./pages/AdminPage";
-import LoginPage from "./pages/LoginPage";
+import LandingPage from "./pages/LandingPage";
 
 // ─── Gradient map by category ─────────────────────────────────────────────────
 
@@ -283,7 +283,7 @@ export default function OutonightApp() {
   }
 
   if (!user) {
-    return <LoginPage onLogin={(session) => setUser(session.user)} />;
+    return <LandingPage onLogin={(session) => setUser(session.user)} />;
   }
 
   if (dataLoading) {
