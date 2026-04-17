@@ -171,7 +171,10 @@ export default function LandingPage({ onLogin }) {
     )
     setIsIOS(/iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream)
 
-    const handler = e => { e.preventDefault(); setInstallPrompt(e) }
+    // Use prompt captured early in main.jsx (avoids race condition)
+    if (window.__installPrompt) setInstallPrompt(window.__installPrompt)
+
+    const handler = e => { e.preventDefault(); setInstallPrompt(e); window.__installPrompt = e; }
     window.addEventListener('beforeinstallprompt', handler)
     return () => window.removeEventListener('beforeinstallprompt', handler)
   }, [])
