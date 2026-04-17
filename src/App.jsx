@@ -1421,9 +1421,8 @@ function ProfileScreen({ profile, draft, setDraft, editOpen, setEditOpen, savePr
       </section>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-2.5">
+      <div className="grid grid-cols-1 gap-2.5">
         <StatCard value={String(joinedCount)} label="Joined" icon="🎟️" />
-        <StatCard value="—" label="Friends" icon="👥" />
       </div>
 
       {/* Edit panel */}
