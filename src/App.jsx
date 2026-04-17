@@ -31,7 +31,6 @@ function normalizeEvent(ev, barsMap, rsvpCountMap = {}) {
 const TABS = [
   { id: "home",    label: "Home",    icon: Home },
   { id: "explore", label: "Explore", icon: Compass },
-  { id: "map",     label: "Map",     icon: MapPin },
   { id: "profile", label: "Profile", icon: User },
 ];
 
@@ -378,7 +377,6 @@ export default function OutonightApp() {
                   user={user}
                 />
               )}
-              {route.tab === "map" && <MapScreen events={events} openEvent={openEvent} />}
               {route.tab === "admin" && (
                 <AdminPage onBack={() => navigate("profile")} />
               )}
@@ -441,7 +439,7 @@ export default function OutonightApp() {
 // ─── TopBar ───────────────────────────────────────────────────────────────────
 
 function TopBar({ route, onBack }) {
-  const titles = { home: "Tonight in Zlín", explore: "Bars & Events", event: "Event details", map: "Map", profile: "Profile" };
+  const titles = { home: "Tonight in Zlín", explore: "Bars & Events", event: "Event details", profile: "Profile" };
   return (
     <div className="flex items-center justify-between gap-3">
       <div className="flex items-center gap-3">
