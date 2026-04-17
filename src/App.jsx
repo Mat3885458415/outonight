@@ -97,11 +97,12 @@ export default function OutonightApp() {
   // ── Fetch bars + events from Supabase ────────────────────────────────────
   useEffect(() => {
     async function fetchData() {
+      const today = new Date().toISOString().slice(0, 10);
       const [{ data: barsData }, { data: eventsData }, { data: rsvpData }, { data: plansData }, { data: restosData }, { data: restoPlansData }] = await Promise.all([
         supabase.from("bars").select("*").order("name"),
-        supabase.from("events").select("*").order("date", { ascending: true }),
+        supabase.from("events").select("*").gte("date", today).order("date", { ascending: true }),
         supabase.from("rsvp").select("event_id, user_id"),
-        supabase.from("bar_plans").select("bar_id, user_id, plan_date, profiles(full_name, university)"),
+        supabase.from("bar_plans").select("bar_id, user_id, plan_date"),
         supabase.from("restaurants").select("*").order("name"),
         supabase.from("resto_plans").select("restaurant_id, user_id, plan_date"),
       ]);
@@ -115,23 +116,33 @@ export default function OutonightApp() {
       }
 
       if (plansData) {
+        // Fetch profiles separately (no direct FK from bar_plans.user_id to profiles.id)
+        const profilesMap = {};
+        const uniqueUserIds = [...new Set(plansData.map(p => p.user_id))];
+        if (uniqueUserIds.length > 0) {
+          const { data: profilesData } = await supabase.from("profiles").select("id, full_name, university").in("id", uniqueUserIds);
+          if (profilesData) profilesData.forEach(p => { profilesMap[p.id] = p; });
+        }
+
         const countMap = {};
         const usersMap = {};
         plansData.forEach(p => {
+          if (p.plan_date < today) return; // ignore past plans
           if (!countMap[p.plan_date]) countMap[p.plan_date] = {};
           countMap[p.plan_date][p.bar_id] = (countMap[p.plan_date][p.bar_id] || 0) + 1;
 
           if (!usersMap[p.plan_date]) usersMap[p.plan_date] = {};
           if (!usersMap[p.plan_date][p.bar_id]) usersMap[p.plan_date][p.bar_id] = [];
+          const profile = profilesMap[p.user_id];
           usersMap[p.plan_date][p.bar_id].push({
             user_id:    p.user_id,
-            full_name:  p.profiles?.full_name || null,
-            university: p.profiles?.university || null,
+            full_name:  profile?.full_name || null,
+            university: profile?.university || null,
           });
         });
         setBarPlans(countMap);
         setBarPlanUsers(usersMap);
-        if (cu) setMyPlans(plansData.filter(p => p.user_id === cu.id).map(p => ({ bar_id: p.bar_id, plan_date: p.plan_date })));
+        if (cu) setMyPlans(plansData.filter(p => p.user_id === cu.id && p.plan_date >= today).map(p => ({ bar_id: p.bar_id, plan_date: p.plan_date })));
       }
 
       if (restosData) setRestaurants(restosData);
@@ -443,7 +454,6 @@ function buildWeekDays() {
   return days;
 }
 
-const WEEK_DAYS = buildWeekDays();
 
 function HomeScreen({ events, bars, restaurants, joined, openEvent, toggleJoin, navigate, myPlans, barPlans, barPlanUsers, toggleBarPlan, myRestoPlans, restoPlans, toggleRestoPlan, currentUserId }) {
   const specialEvents = events.filter(e => e.is_special);
@@ -573,10 +583,11 @@ function HomeScreen({ events, bars, restaurants, joined, openEvent, toggleJoin, 
 // ─── CollapsibleBarCard ───────────────────────────────────────────────────────
 
 function CollapsibleBarCard({ bar, barPlans, barPlanUsers, myPlans, toggleBarPlan, currentUserId }) {
+  const weekDays  = useMemo(() => buildWeekDays(), []);
   const [open, setOpen] = useState(false);
-  const [planDay, setPlanDay] = useState(WEEK_DAYS[0].iso);
+  const [planDay, setPlanDay] = useState(weekDays[0].iso);
 
-  const totalWeek = WEEK_DAYS.reduce((s, d) => s + (barPlans[d.iso]?.[bar.id] || 0), 0);
+  const totalWeek = weekDays.reduce((s, d) => s + (barPlans[d.iso]?.[bar.id] || 0), 0);
   const dayCount  = barPlans[planDay]?.[bar.id] || 0;
   const isMe      = myPlans.some(p => p.bar_id === bar.id && p.plan_date === planDay);
   const dayUsers  = barPlanUsers?.[planDay]?.[bar.id] || [];
@@ -613,7 +624,7 @@ function CollapsibleBarCard({ bar, barPlans, barPlanUsers, myPlans, toggleBarPla
             <div className="border-t border-white/8 px-3 pb-3 pt-3">
               {/* Day picker */}
               <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
-                {WEEK_DAYS.map(day => {
+                {weekDays.map(day => {
                   const cnt    = barPlans[day.iso]?.[bar.id] || 0;
                   const active = planDay === day.iso;
                   return (
@@ -698,10 +709,11 @@ function CollapsibleBarCard({ bar, barPlans, barPlanUsers, myPlans, toggleBarPla
 // ─── CollapsibleRestoCard ─────────────────────────────────────────────────────
 
 function CollapsibleRestoCard({ resto, restoPlans, myRestoPlans, toggleRestoPlan }) {
+  const weekDays  = useMemo(() => buildWeekDays(), []);
   const [open, setOpen] = useState(false);
-  const [planDay, setPlanDay] = useState(WEEK_DAYS[0].iso);
+  const [planDay, setPlanDay] = useState(weekDays[0].iso);
 
-  const totalWeek = WEEK_DAYS.reduce((s, d) => s + (restoPlans[d.iso]?.[resto.id] || 0), 0);
+  const totalWeek = weekDays.reduce((s, d) => s + (restoPlans[d.iso]?.[resto.id] || 0), 0);
   const dayCount  = restoPlans[planDay]?.[resto.id] || 0;
   const isMe      = myRestoPlans.some(p => p.restaurant_id === resto.id && p.plan_date === planDay);
 
@@ -738,7 +750,7 @@ function CollapsibleRestoCard({ resto, restoPlans, myRestoPlans, toggleRestoPlan
               {resto.description && <p className="mb-3 text-xs text-white/55 leading-5">{resto.description}</p>}
               {/* Day picker */}
               <div className="flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
-                {WEEK_DAYS.map(day => {
+                {weekDays.map(day => {
                   const cnt    = restoPlans[day.iso]?.[resto.id] || 0;
                   const active = planDay === day.iso;
                   return (
