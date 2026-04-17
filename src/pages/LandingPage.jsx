@@ -157,11 +157,11 @@ function LoginSheet({ onLogin, onClose }) {
 
 // ── Landing Page ──────────────────────────────────────────────────────────────
 export default function LandingPage({ onLogin }) {
-  const [showLogin, setShowLogin]       = useState(false)
+  const [showLogin, setShowLogin]         = useState(false)
   const [installPrompt, setInstallPrompt] = useState(null)
-  const [isInstalled, setIsInstalled]   = useState(false)
-  const [isIOS, setIsIOS]               = useState(false)
-  const [showIOSHint, setShowIOSHint]   = useState(false)
+  const [isInstalled, setIsInstalled]     = useState(false)
+  const [isIOS, setIsIOS]                 = useState(false)
+  const [showInstallHint, setShowInstallHint] = useState(false)
   const stars = useStars(55)
 
   useEffect(() => {
@@ -180,11 +180,13 @@ export default function LandingPage({ onLogin }) {
   }, [])
 
   const handleInstall = async () => {
-    if (isIOS) { setShowIOSHint(true); return }
     if (installPrompt) {
       installPrompt.prompt()
       const { outcome } = await installPrompt.userChoice
       if (outcome === 'accepted') setInstallPrompt(null)
+    } else {
+      // Native prompt not available — show manual instructions
+      setShowInstallHint(true)
     }
   }
 
@@ -374,28 +376,43 @@ export default function LandingPage({ onLogin }) {
         </motion.p>
       </div>
 
-      {/* ── iOS install hint ── */}
+      {/* ── Install instructions (iOS + Android fallback) ── */}
       <AnimatePresence>
-        {showIOSHint && (
+        {showInstallHint && (
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 30 }}
             className="fixed bottom-6 left-4 right-4 z-50 mx-auto max-w-md rounded-2xl border border-white/12 bg-[#1A1B26]/95 p-5 shadow-2xl backdrop-blur-xl"
           >
-            <div className="mb-2 flex items-center gap-2">
+            <div className="mb-3 flex items-center gap-2">
               <span className="text-lg">📱</span>
-              <p className="font-semibold text-sm">Install on iPhone</p>
+              <p className="font-semibold text-sm">Install Outonight</p>
             </div>
-            <p className="text-xs text-white/55 leading-relaxed">
-              1. Open in <span className="font-semibold text-white/80">Safari</span><br />
-              2. Tap the <span className="font-semibold text-white/80">Share</span> button{' '}
-              <span className="inline-block rounded bg-white/10 px-1 text-xs">⎙</span> at the bottom<br />
-              3. Select <span className="font-semibold text-white/80">"Add to Home Screen"</span>
-            </p>
+
+            {isIOS ? (
+              <div>
+                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-violet-400">iPhone / iPad</p>
+                <p className="text-xs text-white/60 leading-relaxed">
+                  1. Open in <span className="font-semibold text-white/85">Safari</span><br />
+                  2. Tap <span className="font-semibold text-white/85">Share</span> <span className="rounded bg-white/10 px-1">⎙</span> at the bottom<br />
+                  3. Select <span className="font-semibold text-white/85">"Add to Home Screen"</span>
+                </p>
+              </div>
+            ) : (
+              <div>
+                <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-violet-400">Android Chrome</p>
+                <p className="text-xs text-white/60 leading-relaxed">
+                  1. Tap the menu <span className="font-semibold text-white/85">⋮</span> (top right)<br />
+                  2. Select <span className="font-semibold text-white/85">"Add to Home Screen"</span><br />
+                  3. Confirm by tapping <span className="font-semibold text-white/85">"Install"</span>
+                </p>
+              </div>
+            )}
+
             <button
-              onClick={() => setShowIOSHint(false)}
-              className="mt-3 rounded-xl bg-violet-600/20 px-4 py-1.5 text-xs font-medium text-violet-300"
+              onClick={() => setShowInstallHint(false)}
+              className="mt-4 w-full rounded-xl bg-violet-600/20 py-2 text-xs font-medium text-violet-300"
             >
               Got it
             </button>
