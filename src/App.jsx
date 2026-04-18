@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Compass, Home, MapPin, Navigation, Search, Settings, Share2, User, X, ChevronRight } from "lucide-react";
+import { Compass, Home, MapPin, Navigation, QrCode, Search, Settings, Share2, User, X, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "./lib/supabase";
 import AdminPage from "./pages/AdminPage";
 import LandingPage from "./pages/LandingPage";
@@ -377,6 +378,7 @@ export default function OutonightApp() {
                   isJoined={joined.includes(selectedEvent.id)}
                   onJoin={() => toggleJoin(selectedEvent.id)}
                   user={user}
+                  userName={profile.name}
                 />
               )}
               {route.tab === "admin" && (
@@ -1089,12 +1091,64 @@ function BarCard({ bar, joined, onToggleJoin, onOpenEvent, isExpanded, onToggleE
   );
 }
 
+// ─── QRModal ──────────────────────────────────────────────────────────────────
+
+function QRModal({ event, userName, onClose }) {
+  const qrData = JSON.stringify({
+    app: "OUTONIGHT",
+    name: userName,
+    event: event.title,
+    venue: event.barName,
+    date: event.date,
+  });
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 backdrop-blur-sm" onClick={onClose}>
+      <motion.div
+        className="w-full max-w-sm rounded-t-[36px] bg-[#11131B] p-6 pb-10"
+        initial={{ y: "100%" }}
+        animate={{ y: 0 }}
+        exit={{ y: "100%" }}
+        transition={{ type: "spring", damping: 28, stiffness: 300 }}
+        onClick={e => e.stopPropagation()}
+      >
+        <div className="mb-5 flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-semibold">Mon QR Code</h3>
+            <p className="text-xs text-white/45">Montre-le à l'entrée pour ton discount</p>
+          </div>
+          <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/60">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="flex flex-col items-center gap-5">
+          <div className="rounded-[24px] bg-white p-5">
+            <QRCodeSVG value={qrData} size={200} bgColor="#ffffff" fgColor="#0B0C11" level="M" />
+          </div>
+
+          <div className="w-full rounded-[20px] border border-white/8 bg-white/5 p-4 text-center">
+            <p className="text-sm font-semibold text-white">{userName}</p>
+            <p className="mt-0.5 text-xs text-violet-300">{event.title}</p>
+            <p className="mt-0.5 text-xs text-white/45">{event.date} · {event.barName}</p>
+          </div>
+
+          <p className="text-center text-xs text-white/30">
+            Ce QR est unique à ton compte — valable pour cet événement uniquement
+          </p>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
 // ─── EventScreen ──────────────────────────────────────────────────────────────
 
-function EventScreen({ event, isJoined, onJoin, user }) {
+function EventScreen({ event, isJoined, onJoin, user, userName }) {
   const [attendees, setAttendees] = useState([]);
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [showShare, setShowShare] = useState(false);
+  const [showQR, setShowQR] = useState(false);
 
   useEffect(() => {
     async function fetchAttendees() {
@@ -1174,11 +1228,22 @@ function EventScreen({ event, isJoined, onJoin, user }) {
             {isJoined ? "✓ You're going" : "Join this event"}
           </button>
         </div>
+        {isJoined && (
+          <button
+            onClick={() => setShowQR(true)}
+            className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-2xl border border-violet-400/30 bg-violet-500/10 py-3 text-sm font-medium text-violet-300 transition active:scale-[0.98]"
+          >
+            <QrCode size={14} />
+            Mon QR Code — discount à l'entrée
+          </button>
+        )}
         <button onClick={handleShare} className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] py-3 text-sm text-white/65 transition active:scale-[0.98]">
           <Share2 size={14} />
           Share with friends
         </button>
       </section>
+
+      {showQR && <QRModal event={event} userName={userName || user?.user_metadata?.full_name || user?.email?.split("@")[0] || "Student"} onClose={() => setShowQR(false)} />}
 
       {showShare && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm" onClick={() => setShowShare(false)}>
