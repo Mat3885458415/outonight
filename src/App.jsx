@@ -1114,8 +1114,8 @@ function QRModal({ event, userName, onClose }) {
       >
         <div className="mb-5 flex items-center justify-between">
           <div>
-            <h3 className="text-base font-semibold">Mon QR Code</h3>
-            <p className="text-xs text-white/45">Montre-le à l'entrée pour ton discount</p>
+            <h3 className="text-base font-semibold">My QR Code</h3>
+            <p className="text-xs text-white/45">Show it at the door to get your discount</p>
           </div>
           <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-white/60">
             <X size={16} />
@@ -1134,7 +1134,7 @@ function QRModal({ event, userName, onClose }) {
           </div>
 
           <p className="text-center text-xs text-white/30">
-            Ce QR est unique à ton compte — valable pour cet événement uniquement
+            This QR is unique to your account — valid for this event only
           </p>
         </div>
       </motion.div>
@@ -1234,7 +1234,7 @@ function EventScreen({ event, isJoined, onJoin, user, userName }) {
             className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-2xl border border-violet-400/30 bg-violet-500/10 py-3 text-sm font-medium text-violet-300 transition active:scale-[0.98]"
           >
             <QrCode size={14} />
-            Mon QR Code — discount à l'entrée
+            My QR Code — get your discount at the door
           </button>
         )}
         <button onClick={handleShare} className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] py-3 text-sm text-white/65 transition active:scale-[0.98]">
