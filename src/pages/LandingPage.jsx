@@ -279,6 +279,31 @@ export default function LandingPage({ onLogin }) {
           ))}
         </motion.div>
 
+        {/* Reductions banner */}
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.38 }}
+          className="mb-8 flex w-full items-center gap-3 rounded-2xl border border-violet-500/20 bg-violet-500/[0.08] px-4 py-3.5"
+        >
+          <motion.span
+            animate={{ scale: [1, 1.18, 1] }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+            className="text-xl"
+          >
+            🏷️
+          </motion.span>
+          <div>
+            <p className="text-[13px] font-semibold text-violet-200">Reductions coming soon</p>
+            <p className="text-[11px] text-white/40">Stay connected — exclusive deals on your way</p>
+          </div>
+          <motion.div
+            animate={{ opacity: [0.4, 1, 0.4] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="ml-auto h-2 w-2 shrink-0 rounded-full bg-violet-400"
+          />
+        </motion.div>
+
         {/* Phone mockup */}
         <motion.div
           initial={{ opacity: 0, y: 30, scale: 0.95 }}
