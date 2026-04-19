@@ -491,6 +491,31 @@ function HomeScreen({ events, bars, restaurants, joined, openEvent, toggleJoin, 
   return (
     <div className="space-y-6">
 
+      {/* ── Reductions banner ── */}
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="flex items-center gap-3 rounded-2xl border border-violet-500/20 bg-violet-500/[0.08] px-4 py-3"
+      >
+        <motion.span
+          animate={{ scale: [1, 1.18, 1] }}
+          transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+          className="text-xl"
+        >
+          🏷️
+        </motion.span>
+        <div>
+          <p className="text-[13px] font-semibold text-violet-200">Reductions coming soon</p>
+          <p className="text-[11px] text-white/40">Stay connected — exclusive deals on your way</p>
+        </div>
+        <motion.div
+          animate={{ opacity: [0.4, 1, 0.4] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="ml-auto h-2 w-2 shrink-0 rounded-full bg-violet-400"
+        />
+      </motion.div>
+
       {/* ── Special Events ── */}
       {specialEvents.length > 0 && (
         <section>
