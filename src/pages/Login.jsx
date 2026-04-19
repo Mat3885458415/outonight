@@ -9,7 +9,7 @@ export default function Login({ onLogin }) {
       <div className={styles.card}>
         <div className={styles.logo}>OUT</div>
         <h1 className={styles.title}>Welcome to OUTONIGHT</h1>
-        <p className={styles.sub}>Discover events, parties & restaurants in Zlín — made for TBU students</p>
+        <p className={styles.sub}>Discover events, parties & restaurants in Zlín — made for UTB students</p>
 
         <div className={styles.btns}>
           <button className={styles.btnSocial} onClick={onLogin}>

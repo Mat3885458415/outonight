@@ -3,9 +3,9 @@ import styles from './FeedPage.module.css'
 
 const MOCK_FEED = [
   { id: 1, venue: 'Club Rubín', date: 'Fri 18 Apr', time: '10:00pm', badge: 'hot', emoji: '🎵', color: '#e8eaf6', name: 'Techno Night #12', desc: "The best techno night of the month. 4h DJ set, bar open until 4am. Don't miss it.", attendees: [{n:'Mat',c:'#c5cae9'},{n:'Jana',c:'#b2dfdb'},{n:'Andrea',c:'#ffccbc'},{n:'Karim',c:'#fff9c4'},{n:'Sofia',c:'#fce4ec'}] },
-  { id: 2, venue: 'Bar Panorama', date: 'Thu 17 Apr', time: '8:00pm', badge: '', emoji: '🍺', color: '#e3f2fd', name: 'Thursday Happy Hour', desc: '2-for-1 beers until 10pm. Popular with TBU students.', attendees: [{n:'Lena',c:'#dcedc8'},{n:'Pedro',c:'#bbdefb'}] },
-  { id: 3, venue: 'Erasmus Zlín', date: 'Sat 19 Apr', time: '9:00pm', badge: 'free', emoji: '🎤', color: '#ede7f6', name: 'Erasmus International Night', desc: 'Monthly Erasmus party. Meet students from all over the world. Free entry with TBU card.', attendees: [{n:'Karim',c:'#fff9c4'},{n:'Sofia',c:'#fce4ec'},{n:'Andrea',c:'#ffccbc'},{n:'Jana',c:'#b2dfdb'}] },
-  { id: 4, venue: 'TBU Sports', date: 'Wed 16 Apr', time: '6:00pm', badge: 'free', emoji: '⚽', color: '#e8f5e9', name: 'TBU Football Match', desc: 'Weekly open football game. All levels welcome.', attendees: [{n:'Adam',c:'#dcedc8'},{n:'Radek',c:'#b2dfdb'}] },
+  { id: 2, venue: 'Bar Panorama', date: 'Thu 17 Apr', time: '8:00pm', badge: '', emoji: '🍺', color: '#e3f2fd', name: 'Thursday Happy Hour', desc: '2-for-1 beers until 10pm. Popular with UTB students.', attendees: [{n:'Lena',c:'#dcedc8'},{n:'Pedro',c:'#bbdefb'}] },
+  { id: 3, venue: 'Erasmus Zlín', date: 'Sat 19 Apr', time: '9:00pm', badge: 'free', emoji: '🎤', color: '#ede7f6', name: 'Erasmus International Night', desc: 'Monthly Erasmus party. Meet students from all over the world. Free entry with UTB card.', attendees: [{n:'Karim',c:'#fff9c4'},{n:'Sofia',c:'#fce4ec'},{n:'Andrea',c:'#ffccbc'},{n:'Jana',c:'#b2dfdb'}] },
+  { id: 4, venue: 'UTB Sports', date: 'Wed 16 Apr', time: '6:00pm', badge: 'free', emoji: '⚽', color: '#e8f5e9', name: 'UTB Football Match', desc: 'Weekly open football game. All levels welcome.', attendees: [{n:'Adam',c:'#dcedc8'},{n:'Radek',c:'#b2dfdb'}] },
 ]
 
 export default function FeedPage({ onOpenEvent }) {
@@ -71,7 +71,7 @@ export default function FeedPage({ onOpenEvent }) {
                 <div className={styles.attAv} style={{ background: a.c }}>{a.n[0]}</div>
                 <div>
                   <div className={styles.attName}>{a.n}</div>
-                  <div className={styles.attUni}>TBU · Erasmus</div>
+                  <div className={styles.attUni}>UTB · Erasmus</div>
                 </div>
               </div>
             ))}

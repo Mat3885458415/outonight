@@ -65,7 +65,7 @@ export default function OutonightApp() {
   const [restoPlans, setRestoPlans]   = useState({}); // { "date": { restoId: count } }
   const [editOpen, setEditOpen]       = useState(false);
   const [toast, setToast]             = useState(null);
-  const [profile, setProfile]         = useState({ name: "", bio: "TBU Zlín · Erasmus student", mood: "Looking for plans tonight", avatarUrl: null });
+  const [profile, setProfile]         = useState({ name: "", bio: "UTB Zlín · Erasmus student", mood: "Looking for plans tonight", avatarUrl: null });
   const [draft, setDraft]             = useState(profile);
   const toastRef = useRef(null);
 
@@ -897,7 +897,7 @@ function CollapsibleRestoCard({ resto, restoPlans, myRestoPlans, toggleRestoPlan
 // ─── EventsSportScreen ────────────────────────────────────────────────────────
 
 const SPORT_ITEMS = [
-  { emoji: "⚽", name: "Football",    sub: "Every Saturday · TBU Campus",   color: "from-emerald-500/25 to-green-500/15" },
+  { emoji: "⚽", name: "Football",    sub: "Every Saturday · UTB Campus",   color: "from-emerald-500/25 to-green-500/15" },
   { emoji: "🏀", name: "Basketball",  sub: "Wednesday evenings · Indoor gym", color: "from-orange-500/25 to-amber-500/15" },
   { emoji: "🏐", name: "Volleyball",  sub: "Sunday afternoons · Beach court", color: "from-sky-500/25 to-cyan-500/15"   },
   { emoji: "🎾", name: "Tennis",      sub: "Open courts · UTB Sports center", color: "from-yellow-500/25 to-lime-500/15" },
@@ -971,7 +971,7 @@ function EventsSportScreen({ events, joined, openEvent, toggleJoin }) {
 
       {activeTab === "sport" && (
         <div className="space-y-3">
-          <p className="text-[11px] uppercase tracking-[0.22em] text-white/35">Sports at TBU Zlín</p>
+          <p className="text-[11px] uppercase tracking-[0.22em] text-white/35">Sports at UTB Zlín</p>
           {SPORT_ITEMS.map((s, i) => (
             <motion.div
               key={s.name}

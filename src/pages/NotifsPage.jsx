@@ -6,7 +6,7 @@ const NOTIFS = [
   { id: 1, ico: '🎉', bg: '#e8eaf6', text: 'Jana K. and 3 others just joined', bold: 'Techno Night #12', time: '2 min ago', unread: true, tab: 'Events' },
   { id: 2, ico: '🎁', bg: '#e8f5e9', text: 'New giveaway — win', bold: '2 free entries to Club Rubín tonight', time: '15 min ago', unread: true, tab: 'Contests' },
   { id: 3, ico: '🍕', bg: '#fff3e0', text: 'Pizzeria Modrá Hvězda —', bold: '20% student discount this week', time: '1h ago', unread: true, tab: 'Restaurants' },
-  { id: 4, ico: '⚽', bg: '#e8f5e9', text: 'New event in Sport —', bold: 'TBU Football Match Wednesday', time: '3h ago', unread: false, tab: 'Events' },
+  { id: 4, ico: '⚽', bg: '#e8f5e9', text: 'New event in Sport —', bold: 'UTB Football Match Wednesday', time: '3h ago', unread: false, tab: 'Events' },
   { id: 5, ico: '🎵', bg: '#e8eaf6', text: 'Karim B. also joined', bold: 'Erasmus Night', time: '5h ago', unread: false, tab: 'Events' },
   { id: 6, ico: '🏀', bg: '#fff8e1', text: 'Reminder:', bold: 'Open Basketball 3v3 is tomorrow at 2pm', time: 'Yesterday', unread: false, tab: 'Events' },
 ]

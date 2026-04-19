@@ -15,7 +15,7 @@ export default function ProfilePage({ session, isAdmin, onOpenAdmin }) {
       <div className={styles.top}>
         <div className={styles.avatar}>{initials}</div>
         <div className={styles.name}>{name}</div>
-        <div className={styles.uni}>TBU Zlín · Erasmus</div>
+        <div className={styles.uni}>UTB Zlín · Erasmus</div>
         <button className={styles.editBtn}>Edit profile</button>
       </div>
 

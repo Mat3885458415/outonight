@@ -6,14 +6,14 @@ const MOCK_EVENTS = [
   { id: 1, name: 'Techno Night #12', venue: 'Club Rubín', date: 'Fri 18 Apr', time: '10:00pm', price: '150 CZK', category: 'party', badge: 'hot', emoji: '🎵', color: '#e8eaf6', going: 50 },
   { id: 2, name: 'Thursday Happy Hour', venue: 'Bar Panorama', date: 'Thu 17 Apr', time: '8:00pm', price: '80 CZK', category: 'party', badge: '', emoji: '🍺', color: '#e3f2fd', going: 25 },
   { id: 3, name: 'Erasmus Night', venue: 'Erasmus Zlín', date: 'Sat 19 Apr', time: '9:00pm', price: 'Free', category: 'party', badge: 'free', emoji: '🎤', color: '#ede7f6', going: 92 },
-  { id: 4, name: 'TBU Football Match', venue: 'TBU Sports Ground', date: 'Wed 16 Apr', time: '6:00pm', price: 'Free', category: 'sport', badge: 'free', emoji: '⚽', color: '#e8f5e9', going: 18 },
-  { id: 5, name: 'Open Basketball 3v3', venue: 'TBU Gym', date: 'Sat 19 Apr', time: '2:00pm', price: 'Free', category: 'sport', badge: 'new', emoji: '🏀', color: '#e3f2fd', going: 10 },
+  { id: 4, name: 'UTB Football Match', venue: 'UTB Sports Ground', date: 'Wed 16 Apr', time: '6:00pm', price: 'Free', category: 'sport', badge: 'free', emoji: '⚽', color: '#e8f5e9', going: 18 },
+  { id: 5, name: 'Open Basketball 3v3', venue: 'UTB Gym', date: 'Sat 19 Apr', time: '2:00pm', price: 'Free', category: 'sport', badge: 'new', emoji: '🏀', color: '#e3f2fd', going: 10 },
 ]
 
 const MOCK_RESTAURANTS = [
-  { id: 1, name: 'Pizzeria Modrá Hvězda', emoji: '🍕', color: '#fff3e0', cuisine: 'Italian · Pizza', rating: 4.2, dist: '120m from TBU', tags: ['Student deal', 'Open now'] },
-  { id: 2, name: 'Asian Garden', emoji: '🍜', color: '#e8f5e9', cuisine: 'Asian · Noodles', rating: 4.8, dist: '400m from TBU', tags: ['Budget friendly'] },
-  { id: 3, name: 'Steakhouse Zlín', emoji: '🥩', color: '#fbe9e7', cuisine: 'Grill · Steakhouse', rating: 4.4, dist: '600m from TBU', tags: ['Group bookings'] },
+  { id: 1, name: 'Pizzeria Modrá Hvězda', emoji: '🍕', color: '#fff3e0', cuisine: 'Italian · Pizza', rating: 4.2, dist: '120m from UTB', tags: ['Student deal', 'Open now'] },
+  { id: 2, name: 'Asian Garden', emoji: '🍜', color: '#e8f5e9', cuisine: 'Asian · Noodles', rating: 4.8, dist: '400m from UTB', tags: ['Budget friendly'] },
+  { id: 3, name: 'Steakhouse Zlín', emoji: '🥩', color: '#fbe9e7', cuisine: 'Grill · Steakhouse', rating: 4.4, dist: '600m from UTB', tags: ['Group bookings'] },
 ]
 
 const CATS = ['All', 'Parties', 'Sport', 'Restaurants', 'Hobbies', 'Free']

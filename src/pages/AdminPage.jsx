@@ -184,7 +184,7 @@ export default function AdminPage({ onBack }) {
             <input className={styles.input} placeholder="Cuisine (ex: Italian · Pizza)" value={resto.cuisine} onChange={e=>setResto({...resto,cuisine:e.target.value})} />
             <textarea className={styles.textarea} placeholder="Description" value={resto.description} onChange={e=>setResto({...resto,description:e.target.value})} />
             <div className={styles.row}>
-              <input className={styles.input} placeholder="Distance (ex: 200m from TBU)" value={resto.distance} onChange={e=>setResto({...resto,distance:e.target.value})} />
+              <input className={styles.input} placeholder="Distance (ex: 200m from UTB)" value={resto.distance} onChange={e=>setResto({...resto,distance:e.target.value})} />
               <input className={styles.input} placeholder="Hours (ex: 11:00–23:00)" value={resto.hours} onChange={e=>setResto({...resto,hours:e.target.value})} />
             </div>
             <div className={styles.row}>

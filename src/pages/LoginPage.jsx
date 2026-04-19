@@ -33,7 +33,7 @@ export default function LoginPage({ onLogin }) {
       <div className={styles.top}>
         <div className={styles.logo}>OUT</div>
         <h1 className={styles.title}>OUTONIGHT</h1>
-        <p className={styles.sub}>Discover events, parties & restaurants<br/>in Zlín — made for TBU students</p>
+        <p className={styles.sub}>Discover events, parties & restaurants<br/>in Zlín — made for UTB students</p>
       </div>
 
       <div className={styles.card}>

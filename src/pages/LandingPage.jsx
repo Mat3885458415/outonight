@@ -254,7 +254,7 @@ export default function LandingPage({ onLogin }) {
           className="mb-10 text-center text-[15px] leading-relaxed text-white/50"
         >
           Discover bars, parties & restaurants<br />
-          <span className="text-violet-300/80">made for TBU Zlín students</span>
+          <span className="text-violet-300/80">made for UTB Zlín students</span>
         </motion.p>
 
         {/* Feature pills */}
@@ -397,7 +397,7 @@ export default function LandingPage({ onLogin }) {
           transition={{ delay: 0.8 }}
           className="mt-8 text-center text-[11px] text-white/20"
         >
-          Zlín · Czech Republic · TBU Students
+          Zlín · Czech Republic · UTB Students
         </motion.p>
       </div>
 

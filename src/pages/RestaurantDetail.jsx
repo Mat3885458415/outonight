@@ -2,9 +2,9 @@ import { useState } from 'react'
 import styles from './DetailPage.module.css'
 
 const MOCK_RESTAURANTS = {
-  1: { name: 'Pizzeria Modrá Hvězda', emoji: '🍕', color: '#fff3e0', cuisine: 'Italian · Pizza', rating: 4.2, dist: '120m from TBU', hours: '11:00–23:00', desc: 'Best pizza in Zlín. Show your TBU card for 20% off. Great for group dinners.', tags: ['Italian','Student deal','Open now'], slots: ['12:00','13:00','19:00','20:00','21:00'] },
-  2: { name: 'Asian Garden', emoji: '🍜', color: '#e8f5e9', cuisine: 'Asian · Noodles', rating: 4.8, dist: '400m from TBU', hours: '11:30–22:00', desc: 'Authentic Asian cuisine. Ramen, dumplings, baos. Best value in town.', tags: ['Asian','Budget friendly'], slots: ['12:00','13:00','18:30','19:30','20:30'] },
-  3: { name: 'Steakhouse Zlín', emoji: '🥩', color: '#fbe9e7', cuisine: 'Grill · Steakhouse', rating: 4.4, dist: '600m from TBU', hours: '12:00–23:00', desc: 'Premium steaks and grill. Perfect for group events and special occasions.', tags: ['Grill','Group bookings'], slots: ['19:00','20:00','21:00'] },
+  1: { name: 'Pizzeria Modrá Hvězda', emoji: '🍕', color: '#fff3e0', cuisine: 'Italian · Pizza', rating: 4.2, dist: '120m from UTB', hours: '11:00–23:00', desc: 'Best pizza in Zlín. Show your UTB card for 20% off. Great for group dinners.', tags: ['Italian','Student deal','Open now'], slots: ['12:00','13:00','19:00','20:00','21:00'] },
+  2: { name: 'Asian Garden', emoji: '🍜', color: '#e8f5e9', cuisine: 'Asian · Noodles', rating: 4.8, dist: '400m from UTB', hours: '11:30–22:00', desc: 'Authentic Asian cuisine. Ramen, dumplings, baos. Best value in town.', tags: ['Asian','Budget friendly'], slots: ['12:00','13:00','18:30','19:30','20:30'] },
+  3: { name: 'Steakhouse Zlín', emoji: '🥩', color: '#fbe9e7', cuisine: 'Grill · Steakhouse', rating: 4.4, dist: '600m from UTB', hours: '12:00–23:00', desc: 'Premium steaks and grill. Perfect for group events and special occasions.', tags: ['Grill','Group bookings'], slots: ['19:00','20:00','21:00'] },
 }
 
 export default function RestaurantDetail({ restaurantId, onBack }) {
@@ -55,7 +55,7 @@ export default function RestaurantDetail({ restaurantId, onBack }) {
             <div style={{fontSize:32,marginBottom:8}}>✅</div>
             <div style={{fontWeight:500,fontSize:15}}>Table reserved!</div>
             <div style={{color:'#666',fontSize:13,marginTop:4}}>{r.name} · Today at {slot||r.slots[0]} · 3 people</div>
-            <div style={{marginTop:12,fontSize:12,color:'#888',lineHeight:1.6}}>Confirmation sent to your email. Show your TBU card for the student discount.</div>
+            <div style={{marginTop:12,fontSize:12,color:'#888',lineHeight:1.6}}>Confirmation sent to your email. Show your UTB card for the student discount.</div>
           </div>
         )}
       </div>
