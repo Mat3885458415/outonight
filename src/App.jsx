@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Compass, Home, MapPin, Navigation, QrCode, Search, Settings, Share2, User, X, ChevronRight } from "lucide-react";
+import { Compass, Home, MapPin, Navigation, QrCode, Search, Settings, Share2, User, X, ChevronRight, Trophy } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "./lib/supabase";
@@ -32,6 +32,7 @@ function normalizeEvent(ev, barsMap, rsvpCountMap = {}) {
 const TABS = [
   { id: "home",    label: "Home",    icon: Home },
   { id: "explore", label: "Explore", icon: Compass },
+  { id: "events",  label: "Events",  icon: Trophy },
   { id: "profile", label: "Profile", icon: User },
 ];
 
@@ -381,6 +382,14 @@ export default function OutonightApp() {
                   userName={profile.name}
                 />
               )}
+              {route.tab === "events" && (
+                <EventsSportScreen
+                  events={events}
+                  joined={joined}
+                  openEvent={openEvent}
+                  toggleJoin={toggleJoin}
+                />
+              )}
               {route.tab === "admin" && (
                 <AdminPage onBack={() => navigate("profile")} />
               )}
@@ -406,7 +415,7 @@ export default function OutonightApp() {
 
         {/* Bottom nav */}
         <div className="fixed bottom-0 left-0 right-0 z-40 mx-auto max-w-md border-t border-white/8 bg-[#0B0C11]/90 px-3 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 backdrop-blur-2xl">
-          <nav className="grid grid-cols-3 gap-2">
+          <nav className="grid grid-cols-4 gap-2">
             {TABS.map((tab) => {
               const Icon  = tab.icon;
               const active = route.tab === tab.id || (tab.id === "home" && route.tab === "event");
@@ -443,7 +452,7 @@ export default function OutonightApp() {
 // ─── TopBar ───────────────────────────────────────────────────────────────────
 
 function TopBar({ route, onBack }) {
-  const titles = { home: "Tonight in Zlín", explore: "Bars & Events", event: "Event details", profile: "Profile" };
+  const titles = { home: "Tonight in Zlín", explore: "Bars & Events", events: "Events & Sport", event: "Event details", profile: "Profile" };
   return (
     <div className="flex items-center justify-between gap-3">
       <div className="flex items-center gap-3">
@@ -882,6 +891,133 @@ function CollapsibleRestoCard({ resto, restoPlans, myRestoPlans, toggleRestoPlan
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+// ─── EventsSportScreen ────────────────────────────────────────────────────────
+
+const SPORT_ITEMS = [
+  { emoji: "⚽", name: "Football",    sub: "Every Saturday · TBU Campus",   color: "from-emerald-500/25 to-green-500/15" },
+  { emoji: "🏀", name: "Basketball",  sub: "Wednesday evenings · Indoor gym", color: "from-orange-500/25 to-amber-500/15" },
+  { emoji: "🏐", name: "Volleyball",  sub: "Sunday afternoons · Beach court", color: "from-sky-500/25 to-cyan-500/15"   },
+  { emoji: "🎾", name: "Tennis",      sub: "Open courts · UTB Sports center", color: "from-yellow-500/25 to-lime-500/15" },
+  { emoji: "🏊", name: "Swimming",    sub: "Daily · UTB Pool",               color: "from-blue-500/25 to-indigo-500/15" },
+  { emoji: "🥊", name: "Boxing",      sub: "Mon & Thu · Fitness center",     color: "from-red-500/25 to-rose-500/15"    },
+];
+
+function EventsSportScreen({ events, joined, openEvent, toggleJoin }) {
+  const [activeTab, setActiveTab] = useState("events");
+
+  const partyEvents = events.filter(e => e.category === "party" || !e.category);
+  const sportEvents = events.filter(e => e.category === "sport");
+  const otherEvents = events.filter(e => e.category && e.category !== "party" && e.category !== "sport");
+
+  return (
+    <div className="space-y-5">
+      {/* Tab switcher */}
+      <div className="flex gap-2 rounded-2xl border border-white/8 bg-white/[0.04] p-1">
+        {[{ id: "events", label: "🎉 Events" }, { id: "sport", label: "🏆 Sport" }].map(t => (
+          <button
+            key={t.id}
+            onClick={() => setActiveTab(t.id)}
+            className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition ${activeTab === t.id ? "bg-white text-[#0B0C11] shadow" : "text-white/50"}`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "events" && (
+        <div className="space-y-5">
+          {/* Parties */}
+          {partyEvents.length > 0 && (
+            <section>
+              <p className="mb-3 text-[11px] uppercase tracking-[0.22em] text-white/35">Parties & Nightlife</p>
+              <div className="space-y-2">
+                {partyEvents.map((ev, i) => (
+                  <EventRow key={ev.id} event={ev} isJoined={joined.includes(ev.id)} onOpen={() => openEvent(ev.id)} onJoin={() => toggleJoin(ev.id)} index={i} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Sport events from DB */}
+          {sportEvents.length > 0 && (
+            <section>
+              <p className="mb-3 text-[11px] uppercase tracking-[0.22em] text-white/35">Sport Events</p>
+              <div className="space-y-2">
+                {sportEvents.map((ev, i) => (
+                  <EventRow key={ev.id} event={ev} isJoined={joined.includes(ev.id)} onOpen={() => openEvent(ev.id)} onJoin={() => toggleJoin(ev.id)} index={i} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Other */}
+          {otherEvents.length > 0 && (
+            <section>
+              <p className="mb-3 text-[11px] uppercase tracking-[0.22em] text-white/35">Other Events</p>
+              <div className="space-y-2">
+                {otherEvents.map((ev, i) => (
+                  <EventRow key={ev.id} event={ev} isJoined={joined.includes(ev.id)} onOpen={() => openEvent(ev.id)} onJoin={() => toggleJoin(ev.id)} index={i} />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {events.length === 0 && <EmptyState message="No events right now" />}
+        </div>
+      )}
+
+      {activeTab === "sport" && (
+        <div className="space-y-3">
+          <p className="text-[11px] uppercase tracking-[0.22em] text-white/35">Sports at TBU Zlín</p>
+          {SPORT_ITEMS.map((s, i) => (
+            <motion.div
+              key={s.name}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.05 }}
+              className={`flex items-center gap-3 rounded-[22px] border border-white/8 bg-gradient-to-r ${s.color} p-4`}
+            >
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-white/10 text-2xl">{s.emoji}</div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold">{s.name}</p>
+                <p className="mt-0.5 text-xs text-white/50">{s.sub}</p>
+              </div>
+              <span className="shrink-0 rounded-full border border-white/15 bg-white/10 px-2.5 py-1 text-[10px] font-medium text-white/70">Soon</span>
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function EventRow({ event, isJoined, onOpen, onJoin, index }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.04 }}
+      className="flex items-center gap-3 rounded-[22px] border border-white/8 bg-white/5 p-3"
+    >
+      <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[16px] bg-gradient-to-br ${event.gradient} text-2xl`}>{event.emoji}</div>
+      <div className="min-w-0 flex-1">
+        <button onClick={onOpen} className="text-left text-sm font-semibold hover:text-violet-200 transition">{event.title}</button>
+        <p className="mt-0.5 text-xs text-white/45">{event.date} · {event.time} · {event.barName}</p>
+        <div className="mt-1 flex items-center gap-2">
+          <span className="text-xs text-violet-300">{event.goingCount} going</span>
+          {event.price === "Free" && <span className="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-emerald-400">Free</span>}
+        </div>
+      </div>
+      <button
+        onClick={onJoin}
+        className={`shrink-0 rounded-xl px-3 py-2 text-xs font-semibold transition active:scale-[0.96] ${isJoined ? "bg-violet-500 text-white" : "bg-white text-[#0B0C11]"}`}
+      >
+        {isJoined ? "✓" : "Join"}
+      </button>
+    </motion.div>
   );
 }
 
